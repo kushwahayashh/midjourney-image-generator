@@ -1,8 +1,6 @@
-// Application state
+// Application state - now supports multiple concurrent generations
 const AppState = {
-    currentMessageId: null,
-    currentPrompt: '',
-    pollInterval: null
+    activeGenerations: new Map(), // Map of messageId -> { prompt, skeletonId, pollTimeoutId }
 };
 
 // Configuration
@@ -125,8 +123,11 @@ async function generateImage() {
         return;
     }
 
+    // Generate a unique skeleton ID for this request
+    const skeletonId = `generation-skeleton-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     // Show skeleton at the top of gallery
-    showSkeletonInGallery(prompt, 4);
+    showSkeletonInGallery(prompt, 4, skeletonId);
     
     // Clear textarea after submission
     promptInput.value = '';
@@ -153,68 +154,97 @@ async function generateImage() {
             throw new Error(data.error || 'Failed to generate image');
         }
 
-        AppState.currentMessageId = data.message_id;
-        AppState.currentPrompt = data.prompt;
+        const messageId = data.message_id;
         
-        // Start polling for status
-        pollStatus();
+        // Track this generation in our state
+        AppState.activeGenerations.set(messageId, {
+            prompt: data.prompt,
+            skeletonId: skeletonId,
+            pollTimeoutId: null
+        });
+        
+        // Start polling for this specific message
+        pollStatus(messageId);
 
     } catch (error) {
         showError(error.message);
-        removeSkeletonFromGallery();
+        removeSkeletonFromGallery(skeletonId);
     }
 }
 
 // Removed updateStatusText - no longer needed
 
-async function pollStatus() {
-    if (!AppState.currentMessageId) return;
+async function pollStatus(messageId) {
+    const generation = AppState.activeGenerations.get(messageId);
+    if (!generation) return;
 
     try {
-        const response = await fetch(`/status/${AppState.currentMessageId}?prompt=${encodeURIComponent(AppState.currentPrompt)}`);
+        const response = await fetch(`/status/${messageId}?prompt=${encodeURIComponent(generation.prompt)}`);
         const data = await response.json();
 
         if (!response.ok) {
             throw new Error(data.error || 'Failed to fetch status');
         }
 
-        // Update progress on skeleton images
-        updateSkeletonProgress(data.progress);
+        // Update progress on skeleton images for this specific generation
+        updateSkeletonProgress(data.progress, generation.skeletonId);
 
         // Check if done
         if (data.status === 'DONE') {
-            handleGenerationComplete(data);
+            handleGenerationComplete(data, messageId);
         } else if (data.status === 'FAILED' || data.status === 'ERROR') {
-            handleGenerationFailed(data.progress);
+            handleGenerationFailed(data.progress, messageId);
         } else {
-            // Continue polling
-            setTimeout(pollStatus, CONFIG.POLL_INTERVAL);
+            // Continue polling for this specific message
+            const timeoutId = setTimeout(() => pollStatus(messageId), CONFIG.POLL_INTERVAL);
+            generation.pollTimeoutId = timeoutId;
         }
 
     } catch (error) {
         showError(error.message);
-        resetGenerationState();
+        resetGenerationState(messageId);
     }
 }
 
-function handleGenerationComplete(data) {
-    // Replace skeleton in gallery with actual images
-    replaceGallerySkeletonWithImages(data.images, data.raw_data);
+function handleGenerationComplete(data, messageId) {
+    const generation = AppState.activeGenerations.get(messageId);
+    if (!generation) return;
     
-    AppState.currentMessageId = null;
+    // Replace skeleton in gallery with actual images
+    replaceGallerySkeletonWithImages(data.images, data.raw_data, generation.skeletonId);
+    
+    // Clean up this generation from active state
+    if (generation.pollTimeoutId) {
+        clearTimeout(generation.pollTimeoutId);
+    }
+    AppState.activeGenerations.delete(messageId);
 }
 
-function handleGenerationFailed(progress) {
+function handleGenerationFailed(progress, messageId) {
+    const generation = AppState.activeGenerations.get(messageId);
+    if (!generation) return;
+    
     showError(`Generation failed: ${progress}`);
-    removeSkeletonFromGallery();
-    AppState.currentMessageId = null;
-    AppState.currentPrompt = '';
+    removeSkeletonFromGallery(generation.skeletonId);
+    
+    // Clean up this generation from active state
+    if (generation.pollTimeoutId) {
+        clearTimeout(generation.pollTimeoutId);
+    }
+    AppState.activeGenerations.delete(messageId);
 }
 
-function resetGenerationState() {
-    removeSkeletonFromGallery();
-    AppState.currentMessageId = null;
-    AppState.currentPrompt = '';
+function resetGenerationState(messageId) {
+    const generation = AppState.activeGenerations.get(messageId);
+    if (!generation) return;
+    
+    removeSkeletonFromGallery(generation.skeletonId);
+    
+    // Clean up this generation from active state
+    if (generation.pollTimeoutId) {
+        clearTimeout(generation.pollTimeoutId);
+    }
+    AppState.activeGenerations.delete(messageId);
 }
 
 // Removed displayImages - now using gallery-based functions
@@ -247,14 +277,14 @@ function extractImagesFromRawData(rawData) {
     return possibleUrls;
 }
 
-function showSkeletonInGallery(prompt, count = 4) {
+function showSkeletonInGallery(prompt, count = 4, skeletonId) {
     const gallerySection = document.getElementById('gallerySection');
     if (!gallerySection) return;
     
     // Create a new generation item for the loading state
     const genItem = document.createElement('div');
     genItem.className = 'generation-item generation-loading';
-    genItem.id = 'currentGenerationSkeleton';
+    genItem.id = skeletonId;
     
     // Create timestamp (empty during generation)
     const timestampDiv = document.createElement('div');
@@ -297,8 +327,8 @@ function showSkeletonInGallery(prompt, count = 4) {
     gallerySection.insertBefore(genItem, gallerySection.firstChild);
 }
 
-function updateSkeletonProgress(progress) {
-    const skeletonItem = document.getElementById('currentGenerationSkeleton');
+function updateSkeletonProgress(progress, skeletonId) {
+    const skeletonItem = document.getElementById(skeletonId);
     if (!skeletonItem) return;
     
     const skeletonCards = skeletonItem.querySelectorAll('.image-card.loading .progress-text');
@@ -318,8 +348,8 @@ function updateSkeletonProgress(progress) {
     });
 }
 
-function replaceGallerySkeletonWithImages(images, rawData) {
-    const skeletonItem = document.getElementById('currentGenerationSkeleton');
+function replaceGallerySkeletonWithImages(images, rawData, skeletonId) {
+    const skeletonItem = document.getElementById(skeletonId);
     if (!skeletonItem) return;
     
     // If no images in the expected format, try to extract from raw data
@@ -400,8 +430,8 @@ function replaceGallerySkeletonWithImages(images, rawData) {
     skeletonItem.removeAttribute('id');
 }
 
-function removeSkeletonFromGallery() {
-    const skeletonItem = document.getElementById('currentGenerationSkeleton');
+function removeSkeletonFromGallery(skeletonId) {
+    const skeletonItem = document.getElementById(skeletonId);
     if (skeletonItem) {
         skeletonItem.style.transition = 'opacity 0.3s ease';
         skeletonItem.style.opacity = '0';

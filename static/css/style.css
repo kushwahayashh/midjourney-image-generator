@@ -10,11 +10,71 @@ body {
     min-height: 100vh;
     padding: 20px;
     padding-bottom: 120px;
-    padding-top: 20px;
+    padding-top: 70px;
 }
 
 html {
     scroll-behavior: smooth;
+}
+
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    z-index: 100;
+    padding: 12px 40px;
+}
+
+.header-content {
+    max-width: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+}
+
+.header-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    color: #e0e0e0;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-icon-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+}
+
+.header-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: none;
 }
 
 .container {
@@ -65,7 +125,7 @@ h1 {
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 4px;
-    padding: 8px 12px;
+    padding: 6px 12px;
     gap: 10px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     transition: all 0.3s ease;
@@ -78,6 +138,7 @@ h1 {
 
 .input-group:focus-within {
     border-color: #555;
+    padding: 8px 12px;
 }
 
 textarea {
@@ -118,8 +179,8 @@ button {
     flex-shrink: 0;
     width: 34px;
     height: 34px;
-    background: #fff;
-    color: #000;
+    background: transparent;
+    color: #fff;
     border: none;
     border-radius: 4px;
     font-size: 16px;
@@ -138,14 +199,14 @@ button {
 }
 
 button:hover:not(:disabled) {
-    background: #e0e0e0;
+    background: rgba(255, 255, 255, 0.1);
     transform: scale(1.05);
 }
 
 button:disabled {
     opacity: 0.3;
     cursor: not-allowed;
-    background: #333;
+    background: transparent;
     color: #666;
 }
 
@@ -205,8 +266,8 @@ button:disabled {
 }
 
 .generation-item {
-    margin-bottom: 40px;
-    padding-bottom: 30px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
     border-bottom: 1px solid #333;
 }
 
