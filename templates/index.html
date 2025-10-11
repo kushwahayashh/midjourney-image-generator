@@ -3,31 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Generator</title>
+    <meta name="description" content="AI-powered image generator using ImaginePro API">
+    <meta name="theme-color" content="#0f0f0f">
+    <title>Vibe - AI Image Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/skeleton.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div class="container">
         <div class="error-message" id="errorMessage"></div>
 
-        <div class="status-section" id="statusSection">
-            <div class="status-header">
-                <div class="spinner" id="spinner"></div>
-                <span class="status-text" id="statusText">Initializing...</span>
-            </div>
-            <div class="progress-text" id="progressText"></div>
-        </div>
-
-        <div class="images-section" id="imagesSection">
-            <h2 style="margin-bottom: 15px; color: #e0e0e0;">
-                <span class="success-badge">✓ Complete</span>
-            </h2>
-            <div class="images-grid" id="imagesGrid"></div>
-        </div>
-
         <div class="gallery-section" id="gallerySection">
-            <!-- Past generations will be loaded here -->
+            <!-- Skeleton loading and all generations will be shown here -->
         </div>
     </div>
 
@@ -36,19 +27,22 @@
         <div class="input-group">
             <textarea 
                 id="promptInput"
+                placeholder="Describe the image you want to create..."
+                aria-label="Image prompt"
             ></textarea>
-            <button id="generateBtn" onclick="generateImage()">
+            <button id="generateBtn" onclick="generateImage()" aria-label="Generate image">
                 <i data-lucide="send" width="20" height="20"></i>
             </button>
         </div>
     </div>
 
     <!-- Image Modal -->
-    <div id="imageModal" class="modal" onclick="closeModal()">
-        <span class="modal-close" onclick="closeModal()">&times;</span>
-        <img id="modalImage" class="modal-content" onclick="event.stopPropagation()">
+    <div id="imageModal" class="modal" onclick="closeModal()" role="dialog" aria-modal="true" aria-label="Image preview">
+        <span class="modal-close" onclick="closeModal()" aria-label="Close modal">&times;</span>
+        <img id="modalImage" class="modal-content" onclick="event.stopPropagation()" alt="Full size generated image">
     </div>
 
+    <script src="{{ url_for('static', filename='js/skeleton.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
