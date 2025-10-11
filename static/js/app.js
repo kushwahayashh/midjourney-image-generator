@@ -11,6 +11,63 @@ function showError(message) {
     }, 5000);
 }
 
+async function loadGenerations() {
+    try {
+        const response = await fetch('/api/generations');
+        const data = await response.json();
+        
+        const gallerySection = document.getElementById('gallerySection');
+        gallerySection.innerHTML = '';
+        
+        if (!data.generations || data.generations.length === 0) {
+            gallerySection.innerHTML = '<div class="gallery-empty">No generations yet. Create your first image!</div>';
+            return;
+        }
+        
+        data.generations.forEach(gen => {
+            const genItem = document.createElement('div');
+            genItem.className = 'generation-item';
+            
+            // Format timestamp
+            const timestamp = new Date(gen.timestamp.replace(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6'));
+            const timeStr = timestamp.toLocaleString();
+            
+            // Create prompt section
+            const promptDiv = document.createElement('div');
+            promptDiv.className = 'generation-prompt';
+            promptDiv.textContent = gen.prompt;
+            
+            const timestampDiv = document.createElement('div');
+            timestampDiv.className = 'generation-timestamp';
+            timestampDiv.textContent = timeStr;
+            
+            // Create images grid
+            const imagesGrid = document.createElement('div');
+            imagesGrid.className = 'images-grid';
+            
+            gen.images.forEach((imageUrl, index) => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.onclick = () => openModal(imageUrl);
+                
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = `Generated image ${index + 1}`;
+                
+                card.appendChild(img);
+                imagesGrid.appendChild(card);
+            });
+            
+            genItem.appendChild(timestampDiv);
+            genItem.appendChild(promptDiv);
+            genItem.appendChild(imagesGrid);
+            gallerySection.appendChild(genItem);
+        });
+    } catch (error) {
+        console.error('Error loading generations:', error);
+    }
+}
+
 function hideStatus() {
     document.getElementById('statusSection').classList.remove('active');
 }
@@ -102,6 +159,9 @@ async function pollStatus() {
             document.getElementById('spinner').style.display = 'none';
             hideStatus();
             displayImages(data.images, data.raw_data);
+            
+            // Reload gallery to show new generation
+            loadGenerations();
             
             // Re-enable button
             const btn = document.getElementById('generateBtn');
@@ -202,11 +262,9 @@ function displayImages(images, rawData) {
 function openModal(imageUrl) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
-    const downloadLink = document.getElementById('modalDownload');
     
     modal.classList.add('active');
     modalImg.src = imageUrl;
-    downloadLink.href = imageUrl;
     
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
@@ -222,6 +280,9 @@ function closeModal() {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Lucide icons
     lucide.createIcons();
+    
+    // Load past generations on page load
+    loadGenerations();
     
     // Close modal on Escape key
     document.addEventListener('keydown', function(e) {

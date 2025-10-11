@@ -25,6 +25,10 @@
             </h2>
             <div class="images-grid" id="imagesGrid"></div>
         </div>
+
+        <div class="gallery-section" id="gallerySection">
+            <!-- Past generations will be loaded here -->
+        </div>
     </div>
 
     <!-- Fixed input section at bottom -->
@@ -43,7 +47,6 @@
     <div id="imageModal" class="modal" onclick="closeModal()">
         <span class="modal-close" onclick="closeModal()">&times;</span>
         <img id="modalImage" class="modal-content" onclick="event.stopPropagation()">
-        <a id="modalDownload" class="modal-download" download onclick="event.stopPropagation()">⬇ Download Image</a>
     </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>

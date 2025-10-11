@@ -9,7 +9,7 @@ from pathlib import Path
 
 app = Flask(__name__)
 
-API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NzU3NjgsImVtYWlsIjoiY295b3BpMTI3NUBjYXBpZW5hLmNvbSIsInVzZXJuYW1lIjoiY295b3BpMTI3NUBjYXBpZW5hLmNvbSIsImlhdCI6MTc2MDE2MDg0MX0.gQXUws3AytFnelxWsrYWWs9mddcytiR1uaHKHLC4i10"
+API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NzU3NjksImVtYWlsIjoia29tZWZvMTM4NEBjYXBpZW5hLmNvbSIsInVzZXJuYW1lIjoia29tZWZvMTM4NEBjYXBpZW5hLmNvbSIsImlhdCI6MTc2MDE2NTgzN30.9RzOPfwmaYp8-0XjIsjd9d-WDV4f_sbpsHbWS-xYMFM"
 BASE_URL = "https://api.imaginepro.ai/api/v1"
 OUTPUT_DIR = "output"
 
@@ -84,6 +84,29 @@ def save_images(message_id, image_urls, prompt, raw_data):
 @app.route('/output/<path:filename>')
 def serve_output(filename):
     return send_from_directory(OUTPUT_DIR, filename)
+
+@app.route('/api/generations')
+def get_generations():
+    """Get all past generations from output folder"""
+    generations = []
+    
+    if not os.path.exists(OUTPUT_DIR):
+        return jsonify({'generations': []})
+    
+    # Get all subdirectories in output folder
+    for folder_name in sorted(os.listdir(OUTPUT_DIR), reverse=True):
+        folder_path = os.path.join(OUTPUT_DIR, folder_name)
+        metadata_path = os.path.join(folder_path, 'metadata.json')
+        
+        if os.path.isdir(folder_path) and os.path.exists(metadata_path):
+            try:
+                with open(metadata_path, 'r') as f:
+                    metadata = json.load(f)
+                    generations.append(metadata)
+            except Exception as e:
+                print(f"Error reading metadata from {folder_name}: {e}")
+    
+    return jsonify({'generations': generations})
 
 @app.route('/')
 def index():
