@@ -1,6 +1,10 @@
 // Application state - now supports multiple concurrent generations
 const AppState = {
     activeGenerations: new Map(), // Map of messageId -> { prompt, skeletonId, pollTimeoutId }
+    modalState: {
+        currentImages: [],
+        currentIndex: 0
+    }
 };
 
 // Configuration
@@ -77,7 +81,7 @@ function createGenerationItem(gen) {
     imagesGrid.className = 'images-grid';
     
     gen.images.forEach((imageUrl, index) => {
-        const card = createImageCard(imageUrl, index);
+        const card = createImageCard(imageUrl, index, gen.images);
         imagesGrid.appendChild(card);
     });
     
@@ -88,10 +92,10 @@ function createGenerationItem(gen) {
     return genItem;
 }
 
-function createImageCard(imageUrl, index) {
+function createImageCard(imageUrl, index, allImages = []) {
     const card = document.createElement('div');
     card.className = 'image-card';
-    card.onclick = () => openModal(imageUrl);
+    card.onclick = () => openModal(imageUrl, allImages.length > 0 ? allImages : [imageUrl], allImages.length > 0 ? allImages.indexOf(imageUrl) : 0);
     
     const img = document.createElement('img');
     img.src = imageUrl;
@@ -415,8 +419,9 @@ function replaceGallerySkeletonWithImages(images, rawData, skeletonId) {
                 }, 100);
             };
             
-            // Make it clickable
-            card.onclick = () => openModal(imageUrl);
+            // Make it clickable - get all images from the grid
+            const allImages = Array.from(grid.querySelectorAll('img')).map(img => img.src).filter(src => src);
+            card.onclick = () => openModal(imageUrl, allImages.length > 0 ? allImages : [imageUrl], allImages.indexOf(imageUrl));
         } else {
             // If we have more images than skeletons, create new cards
             const card = createImageCard(imageUrl, index);
@@ -446,17 +451,29 @@ function removeSkeletonFromGallery(skeletonId) {
 }
 
 // Modal functions
-function openModal(imageUrl) {
+function openModal(imageUrl, allImages = [imageUrl], currentIndex = 0) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
     
     if (!modal || !modalImg) return;
     
+    // Store modal state
+    AppState.modalState.currentImages = allImages;
+    AppState.modalState.currentIndex = currentIndex;
+    
     modal.classList.add('active');
     modalImg.src = imageUrl;
     
+    // Update navigation buttons
+    updateModalNavigation();
+    
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
+    
+    // Re-initialize Lucide icons for the modal buttons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
 function closeModal() {
@@ -465,6 +482,55 @@ function closeModal() {
     
     modal.classList.remove('active');
     document.body.style.overflow = 'auto';
+    
+    // Clear modal state
+    AppState.modalState.currentImages = [];
+    AppState.modalState.currentIndex = 0;
+}
+
+function navigateModal(direction) {
+    const { currentImages, currentIndex } = AppState.modalState;
+    
+    if (currentImages.length === 0) return;
+    
+    // Calculate new index
+    let newIndex = currentIndex + direction;
+    
+    // Wrap around
+    if (newIndex < 0) {
+        newIndex = currentImages.length - 1;
+    } else if (newIndex >= currentImages.length) {
+        newIndex = 0;
+    }
+    
+    // Update state
+    AppState.modalState.currentIndex = newIndex;
+    
+    // Update image
+    const modalImg = document.getElementById('modalImage');
+    if (modalImg) {
+        modalImg.src = currentImages[newIndex];
+    }
+    
+    // Update navigation buttons
+    updateModalNavigation();
+}
+
+function updateModalNavigation() {
+    const prevBtn = document.querySelector('.modal-nav-prev');
+    const nextBtn = document.querySelector('.modal-nav-next');
+    const { currentImages } = AppState.modalState;
+    
+    if (!prevBtn || !nextBtn) return;
+    
+    // Show/hide buttons based on number of images
+    if (currentImages.length <= 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+    } else {
+        prevBtn.style.display = 'flex';
+        nextBtn.style.display = 'flex';
+    }
 }
 
 // Initialize event listeners when DOM is loaded
@@ -487,10 +553,17 @@ function initializeApp() {
 }
 
 function setupModalListeners() {
-    // Close modal on Escape key
+    // Close modal on Escape key, navigate with arrow keys
     document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('imageModal');
+        if (!modal || !modal.classList.contains('active')) return;
+        
         if (e.key === 'Escape') {
             closeModal();
+        } else if (e.key === 'ArrowLeft') {
+            navigateModal(-1);
+        } else if (e.key === 'ArrowRight') {
+            navigateModal(1);
         }
     });
 }
