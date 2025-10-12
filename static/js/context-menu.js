@@ -3,6 +3,7 @@ class ContextMenu {
     constructor() {
         this.menu = null;
         this.currentTarget = null;
+        this.confirmModal = null;
         this.init();
     }
 
@@ -12,6 +13,9 @@ class ContextMenu {
         this.menu.className = 'context-menu';
         this.menu.id = 'contextMenu';
         document.body.appendChild(this.menu);
+
+        // Create confirmation modal
+        this.createConfirmModal();
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
@@ -34,6 +38,78 @@ class ContextMenu {
 
         // Attach context menu to generation items
         this.attachToGenerationItems();
+    }
+
+    createConfirmModal() {
+        this.confirmModal = document.createElement('div');
+        this.confirmModal.className = 'confirm-modal';
+        this.confirmModal.id = 'confirmModal';
+        
+        this.confirmModal.innerHTML = `
+            <div class="confirm-modal-content" onclick="event.stopPropagation()">
+                <div class="confirm-modal-header">
+                    <i data-lucide="alert-triangle" width="24" height="24" class="confirm-modal-icon"></i>
+                    <h3 class="confirm-modal-title">Delete Generation</h3>
+                </div>
+                <p class="confirm-modal-message">
+                    Are you sure you want to delete this generation? This action cannot be undone and will permanently remove all images and data.
+                </p>
+                <div class="confirm-modal-actions">
+                    <button class="confirm-modal-btn confirm-modal-btn-cancel" id="confirmCancel">Cancel</button>
+                    <button class="confirm-modal-btn confirm-modal-btn-confirm" id="confirmDelete">Delete</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(this.confirmModal);
+        
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        
+        // Close on background click
+        this.confirmModal.addEventListener('click', () => {
+            this.hideConfirmModal();
+        });
+        
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.confirmModal.classList.contains('active')) {
+                this.hideConfirmModal();
+            }
+        });
+    }
+
+    showConfirmModal(onConfirm) {
+        this.confirmModal.classList.add('active');
+        
+        const cancelBtn = document.getElementById('confirmCancel');
+        const deleteBtn = document.getElementById('confirmDelete');
+        
+        // Remove old listeners by cloning
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        const newDeleteBtn = deleteBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+        
+        // Add new listeners
+        newCancelBtn.addEventListener('click', () => {
+            this.hideConfirmModal();
+        });
+        
+        newDeleteBtn.addEventListener('click', () => {
+            this.hideConfirmModal();
+            onConfirm();
+        });
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    }
+
+    hideConfirmModal() {
+        this.confirmModal.classList.remove('active');
+        document.body.style.overflow = 'auto';
     }
 
     attachToGenerationItems() {
@@ -148,11 +224,6 @@ class ContextMenu {
                 label: 'Edit Prompt',
                 action: (el) => this.editPrompt(el)
             },
-            {
-                icon: 'repeat',
-                label: 'Regenerate',
-                action: (el) => this.regenerate(el)
-            },
             { divider: true },
             {
                 icon: 'download',
@@ -160,24 +231,6 @@ class ContextMenu {
                 action: (el) => this.downloadAll(el),
                 disabled: !hasImages,
                 className: !hasImages ? 'disabled' : ''
-            },
-            {
-                icon: 'share-2',
-                label: 'Share Generation',
-                action: (el) => this.share(el),
-                disabled: !hasImages,
-                className: !hasImages ? 'disabled' : ''
-            },
-            { divider: true },
-            {
-                icon: 'star',
-                label: 'Add to Favorites',
-                action: (el) => this.addToFavorites(el)
-            },
-            {
-                icon: 'folder-plus',
-                label: 'Add to Collection',
-                action: (el) => this.addToCollection(el)
             },
             { divider: true },
             {
@@ -193,13 +246,13 @@ class ContextMenu {
     copyPrompt(element) {
         const promptText = element.querySelector('.generation-prompt')?.textContent || '';
         navigator.clipboard.writeText(promptText).then(() => {
-            showError('Prompt copied to clipboard!');
-            setTimeout(() => {
-                const errorDiv = document.getElementById('errorMessage');
-                if (errorDiv) errorDiv.classList.remove('active');
-            }, 2000);
+            if (window.toast) {
+                window.toast.success('Prompt copied!', 'Text copied to clipboard');
+            }
         }).catch(err => {
-            showError('Failed to copy prompt');
+            if (window.toast) {
+                window.toast.error('Failed to copy', 'Could not access clipboard');
+            }
         });
     }
 
@@ -222,23 +275,13 @@ class ContextMenu {
         }
     }
 
-    regenerate(element) {
-        const promptText = element.querySelector('.generation-prompt')?.textContent || '';
-        const promptInput = document.getElementById('promptInput');
-        if (promptInput) {
-            promptInput.value = promptText;
-            // Trigger generation
-            if (typeof generateImage === 'function') {
-                generateImage();
-            }
-        }
-    }
-
     downloadAll(element) {
         const images = element.querySelectorAll('.image-card img');
         if (images.length === 0) return;
 
-        showError(`Downloading ${images.length} images...`);
+        if (window.toast) {
+            window.toast.info('Downloading images...', `${images.length} image${images.length > 1 ? 's' : ''} will be downloaded`);
+        }
         
         images.forEach((img, index) => {
             setTimeout(() => {
@@ -252,92 +295,68 @@ class ContextMenu {
         });
     }
 
-    share(element) {
-        const promptText = element.querySelector('.generation-prompt')?.textContent || '';
-        const shareText = `Check out this AI-generated image!\n\nPrompt: ${promptText}`;
-        
-        if (navigator.share) {
-            navigator.share({
-                title: 'AI Generated Image',
-                text: shareText
-            }).catch(err => console.log('Share cancelled'));
-        } else {
-            // Fallback: copy to clipboard
-            navigator.clipboard.writeText(shareText).then(() => {
-                showError('Share text copied to clipboard!');
-            });
-        }
-    }
-
-    addToFavorites(element) {
-        showError('Added to favorites! (Feature coming soon)');
-        // TODO: Implement favorites functionality
-    }
-
-    addToCollection(element) {
-        showError('Add to collection feature coming soon!');
-        // TODO: Implement collections functionality
-    }
-
     async deleteGeneration(element) {
-        if (!confirm('Are you sure you want to delete this generation? This action cannot be undone.')) {
-            return;
-        }
-
-        // Extract message_id from the generation element
-        const timestamp = element.querySelector('.generation-timestamp')?.textContent || '';
-        const images = element.querySelectorAll('.image-card img');
-        
-        // Try to extract message_id from image URLs
-        let messageId = null;
-        if (images.length > 0) {
-            const imgSrc = images[0].src;
-            // URL format: /output/20251011_124505_74ea11dc-85e1-49d9-b491-dfef149dfd35/image_1.png
-            const match = imgSrc.match(/\/output\/\d+_\d+_([a-f0-9-]+)\//);
-            if (match) {
-                messageId = match[1];
+        // Show custom confirmation modal
+        this.showConfirmModal(async () => {
+            // Extract message_id from the generation element
+            const timestamp = element.querySelector('.generation-timestamp')?.textContent || '';
+            const images = element.querySelectorAll('.image-card img');
+            
+            // Try to extract message_id from image URLs
+            let messageId = null;
+            if (images.length > 0) {
+                const imgSrc = images[0].src;
+                // URL format: /output/20251011_124505_74ea11dc-85e1-49d9-b491-dfef149dfd35/image_1.png
+                const match = imgSrc.match(/\/output\/\d+_\d+_([a-f0-9-]+)\//);
+                if (match) {
+                    messageId = match[1];
+                }
             }
-        }
 
-        if (!messageId) {
-            showError('Could not identify generation to delete');
-            return;
-        }
+            if (!messageId) {
+                if (window.toast) {
+                    window.toast.error('Cannot delete', 'Could not identify generation');
+                }
+                return;
+            }
 
-        try {
-            // Animate removal
-            element.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            element.style.opacity = '0';
-            element.style.transform = 'scale(0.95)';
+            try {
+                // Animate removal
+                element.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                element.style.opacity = '0';
+                element.style.transform = 'scale(0.95)';
 
-            // Call backend API to delete
-            const response = await fetch(`/api/generations/${messageId}`, {
-                method: 'DELETE'
-            });
+                // Call backend API to delete
+                const response = await fetch(`/api/generations/${messageId}`, {
+                    method: 'DELETE'
+                });
 
-            const data = await response.json();
+                const data = await response.json();
 
-            if (response.ok) {
-                setTimeout(() => {
-                    element.remove();
-                    showError('Generation deleted successfully!');
+                if (response.ok) {
                     setTimeout(() => {
-                        const errorDiv = document.getElementById('errorMessage');
-                        if (errorDiv) errorDiv.classList.remove('active');
-                    }, 2000);
-                }, 300);
-            } else {
-                // Restore element if deletion failed
+                        element.remove();
+                        if (window.toast) {
+                            window.toast.success('Deleted!', 'Generation removed successfully');
+                        }
+                    }, 300);
+                } else {
+                    // Restore element if deletion failed
+                    element.style.opacity = '1';
+                    element.style.transform = 'scale(1)';
+                    if (window.toast) {
+                        window.toast.error('Delete failed', data.error || 'Could not delete generation');
+                    }
+                }
+            } catch (error) {
+                // Restore element on error
                 element.style.opacity = '1';
                 element.style.transform = 'scale(1)';
-                showError(data.error || 'Failed to delete generation');
+                if (window.toast) {
+                    window.toast.error('Error', error.message);
+                }
             }
-        } catch (error) {
-            // Restore element on error
-            element.style.opacity = '1';
-            element.style.transform = 'scale(1)';
-            showError('Error deleting generation: ' + error.message);
-        }
+        });
     }
 }
 

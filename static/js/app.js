@@ -10,14 +10,10 @@ const CONFIG = {
 };
 
 function showError(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    if (!errorDiv) return;
-    
-    errorDiv.textContent = message;
-    errorDiv.classList.add('active');
-    setTimeout(() => {
-        errorDiv.classList.remove('active');
-    }, CONFIG.ERROR_DISPLAY_TIME);
+    // Legacy function - now uses toast notifications
+    if (window.toast) {
+        window.toast.error(message);
+    }
 }
 
 async function loadGenerations() {
@@ -119,7 +115,9 @@ async function generateImage() {
     const prompt = promptInput.value.trim();
     
     if (!prompt) {
-        showError('Please enter a prompt!');
+        if (window.toast) {
+            window.toast.warning('Empty prompt', 'Please enter a prompt to generate images');
+        }
         return;
     }
 
@@ -167,7 +165,9 @@ async function generateImage() {
         pollStatus(messageId);
 
     } catch (error) {
-        showError(error.message);
+        if (window.toast) {
+            window.toast.error('Generation failed', error.message);
+        }
         removeSkeletonFromGallery(skeletonId);
     }
 }
@@ -201,7 +201,9 @@ async function pollStatus(messageId) {
         }
 
     } catch (error) {
-        showError(error.message);
+        if (window.toast) {
+            window.toast.error('Status check failed', error.message);
+        }
         resetGenerationState(messageId);
     }
 }
@@ -224,7 +226,9 @@ function handleGenerationFailed(progress, messageId) {
     const generation = AppState.activeGenerations.get(messageId);
     if (!generation) return;
     
-    showError(`Generation failed: ${progress}`);
+    if (window.toast) {
+        window.toast.error('Generation failed', progress);
+    }
     removeSkeletonFromGallery(generation.skeletonId);
     
     // Clean up this generation from active state

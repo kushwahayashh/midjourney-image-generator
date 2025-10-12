@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/skeleton.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/context-menu.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -35,8 +36,6 @@
     </header>
 
     <div class="container">
-        <div class="error-message" id="errorMessage"></div>
-
         <div class="gallery-section" id="gallerySection">
             <!-- Skeleton loading and all generations will be shown here -->
         </div>
@@ -62,6 +61,7 @@
         <img id="modalImage" class="modal-content" onclick="event.stopPropagation()" alt="Full size generated image">
     </div>
 
+    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
     <script src="{{ url_for('static', filename='js/skeleton.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/context-menu.js') }}"></script>

@@ -3,10 +3,10 @@
     position: fixed;
     background: #1a1a1a;
     border: 1px solid #444;
-    border-radius: 6px;
+    border-radius: 4px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
-    padding: 6px 0;
-    min-width: 200px;
+    padding: 4px 0;
+    min-width: 180px;
     z-index: 9999;
     opacity: 0;
     transform: scale(0.95);
@@ -23,10 +23,10 @@
 .context-menu-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
+    gap: 10px;
+    padding: 8px 12px;
     color: #e0e0e0;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
     transition: background 0.15s ease;
     user-select: none;
@@ -37,15 +37,15 @@
 }
 
 .context-menu-item i {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
 }
 
 .context-menu-divider {
     height: 1px;
     background: #333;
-    margin: 6px 0;
+    margin: 4px 0;
 }
 
 .context-menu-item.danger {
@@ -62,17 +62,117 @@
     pointer-events: none;
 }
 
-/* Add subtle highlight to generation items on hover */
-.generation-item {
-    position: relative;
-    transition: background 0.2s ease;
-}
-
-.generation-item:hover {
-    background: rgba(255, 255, 255, 0.02);
-}
-
 /* Indicate that generation items are right-clickable */
 .generation-prompt {
     cursor: context-menu;
+}
+
+/* Custom Confirmation Modal */
+.confirm-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    animation: fadeIn 0.2s;
+}
+
+.confirm-modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.confirm-modal-content {
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 32px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.confirm-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.confirm-modal-icon {
+    color: #ff6b6b;
+    flex-shrink: 0;
+}
+
+.confirm-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin: 0;
+}
+
+.confirm-modal-message {
+    color: #999;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.confirm-modal-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Space Mono', monospace;
+    width: auto;
+    height: auto;
+}
+
+.confirm-modal-btn-cancel {
+    background: transparent;
+    color: #999;
+    border: 1px solid #444;
+}
+
+.confirm-modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+    border-color: #666;
+    transform: none;
+}
+
+.confirm-modal-btn-confirm {
+    background: #ff6b6b;
+    color: #fff;
+}
+
+.confirm-modal-btn-confirm:hover {
+    background: #ff6b6b;
 }
