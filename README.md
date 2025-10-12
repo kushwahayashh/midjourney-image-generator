@@ -1,15 +1,21 @@
 # Vibe - AI Image Generator
 
-A modern, clean web application for generating images using the ImaginePro AI API.
+A modern, clean web application for generating images using the ImaginePro AI API with a beautiful, modular architecture.
+
+![Vibe AI Image Generator](readme%20images/image.png)
 
 ## Features
 
-- 🎨 Generate images from text prompts
-- 📱 Responsive design with modern UI
-- 💾 Automatic image saving and gallery
-- ⚡ Real-time generation status updates
-- 🖼️ Modal image preview
-- 📜 Generation history with timestamps
+- 🎨 **Generate images from text prompts** - Powered by ImaginePro AI
+- 📱 **Responsive design** - Modern, dark-themed UI with smooth animations
+- 💾 **Automatic image saving** - All generations saved locally with metadata
+- ⚡ **Real-time status updates** - Live progress tracking with skeleton loaders
+- 🖼️ **Interactive modal viewer** - Full-screen image preview with navigation
+- ⬅️➡️ **Batch navigation** - Browse through images in the same batch with arrow keys
+- 📜 **Generation history** - Complete gallery with timestamps and prompts
+- 🗑️ **Context menu** - Right-click to delete generations
+- 🔔 **Toast notifications** - Clean feedback for all actions
+- ⚙️ **Modular architecture** - Separated components for easy maintenance
 
 ## Setup
 
@@ -56,30 +62,50 @@ A modern, clean web application for generating images using the ImaginePro AI AP
 
 ## Usage
 
+### Generating Images
 1. Enter a descriptive prompt in the input field at the bottom
-2. Press Enter or click the send button
-3. Wait for the generation to complete
-4. View your generated images in the gallery
-5. Click any image to view it in full size
+2. Press **Enter** or click the sparkle button to generate
+3. Watch the real-time progress as your images are created
+4. Images automatically appear in the gallery when complete
+
+### Viewing Images
+- **Click** any image to open full-screen modal viewer
+- Use **arrow keys** (← →) or click the navigation arrows to browse through batch images
+- Press **Escape** or click outside to close the modal
+
+### Managing Generations
+- **Right-click** on any generation to open the context menu
+- Select **Delete** to remove a generation and its images
+- All generations are saved in the `output/` folder with metadata
 
 ## Project Structure
 
 ```
 vibe/
-├── app.py                 # Flask backend
-├── requirements.txt       # Python dependencies
-├── .env.example          # Environment variables template
-├── .gitignore            # Git ignore rules
-├── output/               # Generated images (auto-created)
+├── app.py                    # Flask backend server
+├── requirements.txt          # Python dependencies
+├── .env.example             # Environment variables template
+├── .gitignore               # Git ignore rules
+├── output/                  # Generated images (auto-created)
+│   └── [timestamp_id]/      # Each generation in separate folder
+│       ├── image_1.png      # Generated images
+│       ├── image_2.png
+│       └── metadata.json    # Generation metadata
 ├── templates/
-│   └── index.html        # Main HTML template
+│   └── index.html           # Main HTML template
 └── static/
     ├── css/
-    │   ├── style.css     # Main styles
-    │   └── skeleton.css  # Loading animations
+    │   ├── style.css        # Core app styles
+    │   ├── skeleton.css     # Loading animations
+    │   ├── context-menu.css # Right-click menu styles
+    │   ├── toast.css        # Notification styles
+    │   └── input-box.css    # Input component styles
     └── js/
-        ├── app.js        # Main application logic
-        └── skeleton.js   # Loading utilities
+        ├── app.js           # Main application logic
+        ├── skeleton.js      # Loading utilities
+        ├── context-menu.js  # Context menu functionality
+        ├── toast.js         # Toast notifications
+        └── input-box.js     # Input component logic
 ```
 
 ## Security Notes
@@ -90,12 +116,29 @@ vibe/
 
 ## Technologies Used
 
-- **Backend:** Flask (Python)
-- **Frontend:** Vanilla JavaScript
-- **Styling:** CSS3 with custom design
-- **Icons:** Lucide Icons
-- **Fonts:** Space Mono (Google Fonts)
-- **API:** ImaginePro AI
+- **Backend:** Flask (Python) - Lightweight web server
+- **Frontend:** Vanilla JavaScript - No frameworks, pure JS
+- **Styling:** CSS3 - Custom modular design system
+- **Icons:** Lucide Icons - Beautiful, consistent iconography
+- **Fonts:** Space Mono (Google Fonts) - Monospace aesthetic
+- **API:** ImaginePro AI - Image generation service
+- **Architecture:** Component-based modular structure
+
+## Code Architecture
+
+This project follows a **modular component-based architecture**:
+
+### Component Separation
+- Each feature (input box, modal, toast, context menu) is isolated in its own CSS/JS files
+- Components are self-contained and reusable
+- Clear separation of concerns for maintainability
+
+### Benefits
+- ✅ **Easy to maintain** - Find and fix issues quickly
+- ✅ **Reusable** - Components can be used in other projects
+- ✅ **Scalable** - Add new features without touching existing code
+- ✅ **Debuggable** - Browser dev tools show exact file locations
+- ✅ **Collaborative** - Multiple developers can work simultaneously
 
 ## Troubleshooting
 
