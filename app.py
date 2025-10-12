@@ -221,5 +221,35 @@ def status(message_id):
         print(f"Error in status endpoint: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/generations/<message_id>', methods=['DELETE'])
+def delete_generation(message_id):
+    """Delete a generation and its associated files."""
+    try:
+        if not message_id:
+            return jsonify({'error': 'No message ID provided'}), 400
+        
+        # Find the folder containing this message_id
+        deleted = False
+        if os.path.exists(OUTPUT_DIR):
+            for folder_name in os.listdir(OUTPUT_DIR):
+                if message_id in folder_name:
+                    folder_path = os.path.join(OUTPUT_DIR, folder_name)
+                    if os.path.isdir(folder_path):
+                        # Delete the entire folder
+                        import shutil
+                        shutil.rmtree(folder_path)
+                        deleted = True
+                        print(f"Deleted generation folder: {folder_name}")
+                        break
+        
+        if deleted:
+            return jsonify({'success': True, 'message': 'Generation deleted successfully'})
+        else:
+            return jsonify({'error': 'Generation not found'}), 404
+            
+    except Exception as e:
+        print(f"Error deleting generation: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -1,0 +1,78 @@
+/* Context Menu Styles */
+.context-menu {
+    position: fixed;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+    padding: 6px 0;
+    min-width: 200px;
+    z-index: 9999;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+}
+
+.context-menu.active {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: all;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    color: #e0e0e0;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    user-select: none;
+}
+
+.context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu-item i {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: #333;
+    margin: 6px 0;
+}
+
+.context-menu-item.danger {
+    color: #ff6b6b;
+}
+
+.context-menu-item.danger:hover {
+    background: rgba(255, 107, 107, 0.1);
+}
+
+.context-menu-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Add subtle highlight to generation items on hover */
+.generation-item {
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+.generation-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Indicate that generation items are right-clickable */
+.generation-prompt {
+    cursor: context-menu;
+}
