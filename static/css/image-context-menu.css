@@ -1,0 +1,60 @@
+/* Image Context Menu Styles */
+.image-context-menu {
+    position: fixed;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+    padding: 4px 0;
+    min-width: 180px;
+    z-index: 9999;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+}
+
+.image-context-menu.active {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: all;
+}
+
+.image-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    color: #e0e0e0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    user-select: none;
+}
+
+.image-context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.image-context-menu-item i {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.image-context-menu-divider {
+    height: 1px;
+    background: #333;
+    margin: 4px 0;
+}
+
+.image-context-menu-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Indicate that image cards are right-clickable */
+.image-card {
+    cursor: context-menu;
+}

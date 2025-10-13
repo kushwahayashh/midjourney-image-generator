@@ -95,7 +95,12 @@ function createGenerationItem(gen) {
 function createImageCard(imageUrl, index, allImages = []) {
     const card = document.createElement('div');
     card.className = 'image-card';
-    card.onclick = () => openModal(imageUrl, allImages.length > 0 ? allImages : [imageUrl], allImages.length > 0 ? allImages.indexOf(imageUrl) : 0);
+    
+    // Store the batch images and index on the card for later use
+    const batchImages = allImages.length > 0 ? allImages : [imageUrl];
+    const imageIndex = index;
+    
+    card.onclick = () => openModal(imageUrl, batchImages, imageIndex);
     
     const img = document.createElement('img');
     img.src = imageUrl;
@@ -418,23 +423,23 @@ function replaceGallerySkeletonWithImages(images, rawData, skeletonId) {
                     img.style.opacity = '1';
                 }, 100);
             };
-            
-            // Make it clickable - get all images from the grid
-            const allImages = Array.from(grid.querySelectorAll('img')).map(img => img.src).filter(src => src);
-            card.onclick = () => openModal(imageUrl, allImages.length > 0 ? allImages : [imageUrl], allImages.indexOf(imageUrl));
         } else {
             // If we have more images than skeletons, create new cards
-            const card = createImageCard(imageUrl, index);
+            const card = createImageCard(imageUrl, index, images);
             grid.appendChild(card);
         }
+    });
+    
+    // After all images are added, set up click handlers with proper batch context
+    const allCards = grid.querySelectorAll('.image-card');
+    allCards.forEach((card, idx) => {
+        card.onclick = () => openModal(images[idx], images, idx);
     });
     
     // Remove any extra skeleton cards if we have fewer images
     for (let i = images.length; i < skeletonCards.length; i++) {
         skeletonCards[i].remove();
     }
-    
-    // Remove the loading class from the generation item
     skeletonItem.classList.remove('generation-loading');
     skeletonItem.removeAttribute('id');
 }

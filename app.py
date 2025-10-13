@@ -100,6 +100,7 @@ def save_images(message_id, image_urls, prompt, raw_data):
             "image_count": len(local_image_paths),
             "images": local_image_paths,
             "original_urls": image_urls,
+            "buttons": raw_data.get("buttons", []) if isinstance(raw_data, dict) else [],
             "raw_response": raw_data
         }
         
@@ -198,14 +199,21 @@ def status(message_id):
         local_images = []
         if status_val == "DONE":
             # Try different possible response structures
-            if "data" in data and "images" in data["data"]:
-                images = data["data"]["images"]
-            elif "images" in data:
+            # Check for images array first (variations, normal generations)
+            if "images" in data:
                 images = data["images"]
-            elif "data" in data and "url" in data["data"]:
-                images = [data["data"]["url"]]
+            elif "data" in data and "images" in data["data"]:
+                images = data["data"]["images"]
+            # Check for single uri (upscale results)
+            elif "uri" in data:
+                images = [data["uri"]]
+            elif "data" in data and "uri" in data["data"]:
+                images = [data["data"]["uri"]]
+            # Fallback to url field
             elif "url" in data:
                 images = [data["url"]]
+            elif "data" in data and "url" in data["data"]:
+                images = [data["data"]["url"]]
             
             # Download and save images
             if images:
@@ -219,6 +227,60 @@ def status(message_id):
         })
     except Exception as e:
         print(f"Error in status endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/button', methods=['POST'])
+def button_action():
+    """Handle upscale/variation button actions."""
+    try:
+        if not request.json:
+            return jsonify({'error': 'Invalid request format'}), 400
+        
+        message_id = request.json.get('messageId', '').strip()
+        button = request.json.get('button', '').strip()
+        original_prompt = request.json.get('prompt', '')
+        
+        if not message_id or not button:
+            return jsonify({'error': 'Missing messageId or button'}), 400
+        
+        if not API_KEY:
+            return jsonify({'error': 'API key not configured'}), 500
+        
+        # Make request to ImaginePro button API
+        url = f"{BASE_URL}/nova/button"
+        headers = {'Authorization': f'Bearer {API_KEY}', 'Content-Type': 'application/json'}
+        payload = {
+            "messageId": message_id,
+            "button": button
+        }
+        
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            
+            # Extract new message ID
+            new_message_id = data.get("messageId") or data.get("id") or data.get("data", {}).get("messageId")
+            
+            if not new_message_id:
+                return jsonify({'error': 'Failed to get new message ID from API'}), 500
+            
+            # Determine action type for prompt
+            action_type = "Upscale" if button.startswith('U') else "Variation"
+            new_prompt = f"{action_type} ({button}) of: {original_prompt}"
+            
+            return jsonify({
+                'message_id': new_message_id,
+                'prompt': new_prompt,
+                'button': button,
+                'original_message_id': message_id
+            })
+        except requests.exceptions.RequestException as e:
+            print(f"Error calling button API: {e}")
+            return jsonify({'error': str(e)}), 500
+            
+    except Exception as e:
+        print(f"Error in button endpoint: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/generations/<message_id>', methods=['DELETE'])
