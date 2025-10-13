@@ -215,7 +215,22 @@ class ImageContextMenu {
             }
             
             const messageId = match[1];
-            const imageIndex = parseInt(match[2]);
+            const fileImageIndex = parseInt(match[2]); // This is the index from filename (1-4)
+            
+            // Map from file index to API button index
+            // API provider returns images in VERTICAL order (column-first): [1, 3, 2, 4]
+            // Which represents this 2x2 grid layout:
+            //   1 2
+            //   3 4
+            // So: image_1.png=U1, image_2.png=U3, image_3.png=U2, image_4.png=U4
+            const indexMap = {
+                1: 1,  // image_1.png -> Button U1 (top-left)
+                2: 3,  // image_2.png -> Button U3 (bottom-left) 
+                3: 2,  // image_3.png -> Button U2 (top-right)
+                4: 4   // image_4.png -> Button U4 (bottom-right)
+            };
+            
+            const imageIndex = indexMap[fileImageIndex] || fileImageIndex;
             
             // Get the generation item to extract prompt
             const generationItem = element.closest('.generation-item');
