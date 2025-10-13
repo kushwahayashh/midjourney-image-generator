@@ -570,4 +570,20 @@ function setupModalListeners() {
             navigateModal(1);
         }
     });
+    
+    // Navigate with mouse wheel
+    document.addEventListener('wheel', function(e) {
+        const modal = document.getElementById('imageModal');
+        if (!modal || !modal.classList.contains('active')) return;
+        
+        // Prevent default scrolling behavior
+        e.preventDefault();
+        
+        // Scroll down = next image, scroll up = previous image
+        if (e.deltaY > 0) {
+            navigateModal(1);  // Next image
+        } else if (e.deltaY < 0) {
+            navigateModal(-1); // Previous image
+        }
+    }, { passive: false });
 }
