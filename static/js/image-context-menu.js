@@ -64,8 +64,11 @@ class ImageContextMenu {
         this.currentTarget = targetElement;
         this.currentImageUrl = imageUrl;
         
+        // Check if this is an upscaled image
+        const isUpscaled = this.isUpscaledImage(targetElement);
+        
         // Build menu items
-        const menuItems = this.getMenuItems(imageUrl);
+        const menuItems = this.getMenuItems(imageUrl, isUpscaled);
         this.menu.innerHTML = '';
         
         menuItems.forEach(item => {
@@ -138,19 +141,28 @@ class ImageContextMenu {
         this.menu.style.top = `${top}px`;
     }
 
-    getMenuItems(imageUrl) {
-        return [
-            {
-                icon: 'maximize-2',
-                label: 'Upscale Image',
-                action: (url, element) => this.upscaleImage(url, element)
-            },
-            {
-                icon: 'copy',
-                label: 'Create Variation',
-                action: (url, element) => this.createVariation(url, element)
-            },
-            { divider: true },
+    getMenuItems(imageUrl, isUpscaled = false) {
+        const items = [];
+        
+        // Only show upscale and variation options for non-upscaled images
+        if (!isUpscaled) {
+            items.push(
+                {
+                    icon: 'maximize-2',
+                    label: 'Upscale Image',
+                    action: (url, element) => this.upscaleImage(url, element)
+                },
+                {
+                    icon: 'copy',
+                    label: 'Create Variation',
+                    action: (url, element) => this.createVariation(url, element)
+                },
+                { divider: true }
+            );
+        }
+        
+        // Always show download and copy URL options
+        items.push(
             {
                 icon: 'download',
                 label: 'Download Image',
@@ -161,7 +173,31 @@ class ImageContextMenu {
                 label: 'Copy Image URL',
                 action: (url) => this.copyImageUrl(url)
             }
-        ];
+        );
+        
+        return items;
+    }
+
+    isUpscaledImage(element) {
+        /**
+         * Check if an image is from an upscale operation.
+         * Upscaled images have prompts starting with "Upscale (U"
+         */
+        try {
+            const generationItem = element.closest('.generation-item');
+            if (!generationItem) return false;
+            
+            const promptElement = generationItem.querySelector('.generation-prompt');
+            if (!promptElement) return false;
+            
+            const prompt = promptElement.textContent.trim();
+            
+            // Check if prompt starts with "Upscale (U"
+            return prompt.startsWith('Upscale (U');
+        } catch (error) {
+            console.error('Error checking if image is upscaled:', error);
+            return false;
+        }
     }
 
     // Action handlers

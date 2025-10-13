@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from imageactions import process_button_action, create_action_prompt
 
 # Load environment variables from .env file if it exists
 try:
@@ -246,39 +247,25 @@ def button_action():
         if not API_KEY:
             return jsonify({'error': 'API key not configured'}), 500
         
-        # Make request to ImaginePro button API
-        url = f"{BASE_URL}/nova/button"
-        headers = {'Authorization': f'Bearer {API_KEY}', 'Content-Type': 'application/json'}
-        payload = {
-            "messageId": message_id,
-            "button": button
-        }
+        # Process the button action using the imageactions module
+        result = process_button_action(message_id, button, API_KEY, BASE_URL)
         
-        try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
+        # Create descriptive prompt for the action
+        new_prompt = create_action_prompt(button, original_prompt)
+        
+        return jsonify({
+            'message_id': result['message_id'],
+            'prompt': new_prompt,
+            'button': button,
+            'original_message_id': message_id
+        })
             
-            # Extract new message ID
-            new_message_id = data.get("messageId") or data.get("id") or data.get("data", {}).get("messageId")
-            
-            if not new_message_id:
-                return jsonify({'error': 'Failed to get new message ID from API'}), 500
-            
-            # Determine action type for prompt
-            action_type = "Upscale" if button.startswith('U') else "Variation"
-            new_prompt = f"{action_type} ({button}) of: {original_prompt}"
-            
-            return jsonify({
-                'message_id': new_message_id,
-                'prompt': new_prompt,
-                'button': button,
-                'original_message_id': message_id
-            })
-        except requests.exceptions.RequestException as e:
-            print(f"Error calling button API: {e}")
-            return jsonify({'error': str(e)}), 500
-            
+    except ValueError as e:
+        print(f"Validation error in button endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+    except requests.exceptions.RequestException as e:
+        print(f"API request error in button endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
     except Exception as e:
         print(f"Error in button endpoint: {e}")
         return jsonify({'error': str(e)}), 500
