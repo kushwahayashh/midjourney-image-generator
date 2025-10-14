@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from imageactions import process_button_action, create_action_prompt
+from credits import get_account_credits
 
 # Load environment variables from .env file if it exists
 try:
@@ -299,6 +300,19 @@ def delete_generation(message_id):
     except Exception as e:
         print(f"Error deleting generation: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/credits', methods=['GET'])
+def get_credits():
+    """Get account credits information."""
+    try:
+        if not API_KEY:
+            return jsonify({'error': 'API key not configured', 'creditsExtra': 0}), 500
+        
+        credits_info = get_account_credits(API_KEY)
+        return jsonify(credits_info)
+    except Exception as e:
+        print(f"Error in credits endpoint: {e}")
+        return jsonify({'error': str(e), 'creditsExtra': 0}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)

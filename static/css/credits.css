@@ -1,0 +1,65 @@
+/**
+ * Credits display styling
+ */
+
+.credits-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.credits-container:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.credits-container:active {
+    transform: translateY(0);
+}
+
+.credits-icon {
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+}
+
+.credits-number {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    color: #ffffff;
+    min-width: 30px;
+    text-align: right;
+}
+
+.credits-number.refreshing {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .credits-container {
+        padding: 4px 8px;
+        gap: 6px;
+    }
+    
+    .credits-number {
+        font-size: 12px;
+        min-width: 25px;
+    }
+}
