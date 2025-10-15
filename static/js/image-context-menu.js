@@ -61,6 +61,19 @@ class ImageContextMenu {
     }
 
     show(event, targetElement, imageUrl) {
+        // If menu is already active, hide it first and wait for animation
+        if (this.menu.classList.contains('active')) {
+            this.hide();
+            // Wait for hide animation to complete before showing new menu
+            setTimeout(() => {
+                this.showMenu(event, targetElement, imageUrl);
+            }, 150); // Match the CSS transition duration
+        } else {
+            this.showMenu(event, targetElement, imageUrl);
+        }
+    }
+
+    showMenu(event, targetElement, imageUrl) {
         this.currentTarget = targetElement;
         this.currentImageUrl = imageUrl;
         

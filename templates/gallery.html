@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-powered image generator gallery">
+    <meta name="theme-color" content="#0f0f0f">
+    <title>Gallery - Vibe</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/><path d='M5 3v4'/><path d='M19 17v4'/><path d='M3 5h4'/><path d='M17 19h4'/></svg>" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/gallery.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/context-menu.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/credits.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <i data-lucide="sparkles" width="24" height="24"></i>
+                <h1 class="header-title">Gallery</h1>
+            </div>
+            <div class="header-right">
+                <div class="grid-controls">
+                    <button class="grid-control-btn" id="decreaseColumns" aria-label="Zoom out" title="Zoom out (more images per row)">
+                        <i data-lucide="minus" width="18" height="18"></i>
+                    </button>
+                    <button class="grid-control-btn" id="increaseColumns" aria-label="Zoom in" title="Zoom in (fewer images per row)">
+                        <i data-lucide="plus" width="18" height="18"></i>
+                    </button>
+                </div>
+                <div class="credits-container" onclick="handleCreditsClick()">
+                    <div class="credits-icon">
+                        <i data-lucide="zap" width="18" height="18"></i>
+                    </div>
+                    <span class="credits-number" id="creditsDisplay">0</span>
+                </div>
+                <a href="/" class="header-icon-btn" aria-label="Back to Home">
+                    <i data-lucide="home" width="20" height="20"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="gallery-grid" id="galleryGrid">
+            <!-- Images will be loaded here -->
+        </div>
+        <div class="gallery-empty" id="galleryEmpty" style="display: none;">
+            No images in gallery yet. Generate some images first!
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/credits.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/gallery.js') }}"></script>
+</body>
+</html>

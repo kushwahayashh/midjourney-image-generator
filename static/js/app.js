@@ -4,7 +4,8 @@ const AppState = {
     modalState: {
         currentImages: [],
         currentIndex: 0
-    }
+    },
+    lazyLoadObserver: null
 };
 
 // Configuration
@@ -61,6 +62,7 @@ async function loadGenerations() {
 function createGenerationItem(gen) {
     const genItem = document.createElement('div');
     genItem.className = 'generation-item';
+    genItem.dataset.messageId = gen.message_id || '';
     
     // Format timestamp
     const timestamp = new Date(gen.timestamp.replace(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6'));
@@ -94,7 +96,7 @@ function createGenerationItem(gen) {
 
 function createImageCard(imageUrl, index, allImages = []) {
     const card = document.createElement('div');
-    card.className = 'image-card';
+    card.className = 'image-card loading';
     
     // Store the batch images and index on the card for later use
     const batchImages = allImages.length > 0 ? allImages : [imageUrl];
@@ -103,15 +105,27 @@ function createImageCard(imageUrl, index, allImages = []) {
     card.onclick = () => openModal(imageUrl, batchImages, imageIndex);
     
     const img = document.createElement('img');
-    img.src = imageUrl;
     img.alt = `Generated image ${index + 1}`;
+    img.loading = 'lazy'; // Native lazy loading as fallback
     
-    // Add skeleton loading for images
-    if (window.SkeletonLoader) {
-        window.SkeletonLoader.loadImageWithSkeleton(img, card);
-    }
+    // Use lazy loading with Intersection Observer
+    img.dataset.src = imageUrl;
+    img.classList.add('lazy-load');
     
     card.appendChild(img);
+    
+    // Observe this image for lazy loading
+    if (AppState.lazyLoadObserver) {
+        AppState.lazyLoadObserver.observe(img);
+    } else {
+        // Fallback: load immediately if observer not ready
+        img.src = imageUrl;
+        img.onload = () => {
+            card.classList.remove('loading');
+            card.classList.add('fade-in');
+        };
+    }
+    
     return card;
 }
 
@@ -223,6 +237,11 @@ function handleGenerationComplete(data, messageId) {
     
     // Replace skeleton in gallery with actual images
     replaceGallerySkeletonWithImages(data.images, data.raw_data, generation.skeletonId);
+    
+    // Update credits after generation completes
+    if (typeof fetchAndDisplayCredits === 'function') {
+        fetchAndDisplayCredits(true); // Force refresh credits
+    }
     
     // Clean up this generation from active state
     if (generation.pollTimeoutId) {
@@ -410,11 +429,14 @@ function replaceGallerySkeletonWithImages(images, rawData, skeletonId) {
             
             // Add the actual image (hidden initially)
             const img = document.createElement('img');
-            img.src = imageUrl;
             img.alt = `Generated image ${index + 1}`;
             img.style.opacity = '0';
             img.style.transition = 'opacity 0.5s ease';
+            
             card.appendChild(img);
+            
+            // Load immediately (not lazy) since these are newly generated images at the top
+            img.src = imageUrl;
             
             // When image loads, fade it in and remove skeleton
             img.onload = () => {
@@ -422,6 +444,11 @@ function replaceGallerySkeletonWithImages(images, rawData, skeletonId) {
                     card.classList.remove('loading');
                     img.style.opacity = '1';
                 }, 100);
+            };
+            
+            img.onerror = () => {
+                console.error('Failed to load image:', imageUrl);
+                card.classList.remove('loading');
             };
         } else {
             // If we have more images than skeletons, create new cards
@@ -549,11 +576,120 @@ function initializeApp() {
         lucide.createIcons();
     }
     
+    // Setup lazy loading observer
+    setupLazyLoadObserver();
+    
     // Load past generations on page load
     loadGenerations();
     
     // Setup event listeners
     setupModalListeners();
+    
+    // Check for generation parameter in URL
+    checkGenerationParameter();
+}
+
+function setupLazyLoadObserver() {
+    // Create Intersection Observer for lazy loading images
+    const options = {
+        root: null, // viewport
+        rootMargin: '100px', // Load images 100px before they enter viewport
+        threshold: 0.01
+    };
+    
+    AppState.lazyLoadObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                const src = img.dataset.src;
+                
+                if (src && !img.src) {
+                    // Load the image
+                    img.src = src;
+                    img.onload = () => {
+                        img.classList.add('loaded');
+                        img.removeAttribute('data-src');
+                        
+                        // Remove loading state from parent card
+                        const card = img.closest('.image-card');
+                        if (card) {
+                            card.classList.remove('loading');
+                            card.classList.add('fade-in');
+                        }
+                    };
+                    img.onerror = () => {
+                        console.error('Failed to load image:', src);
+                        const card = img.closest('.image-card');
+                        if (card) {
+                            card.classList.remove('loading');
+                        }
+                    };
+                    
+                    // Stop observing this image
+                    observer.unobserve(img);
+                }
+            }
+        });
+    }, options);
+}
+
+function checkGenerationParameter() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const generationId = urlParams.get('generation');
+    
+    if (generationId) {
+        // Start trying to scroll to the generation with retry logic
+        scrollToGenerationWithRetry(generationId);
+    }
+}
+
+function scrollToGenerationWithRetry(messageId, attempt = 0, maxAttempts = 20) {
+    const gallerySection = document.getElementById('gallerySection');
+    if (!gallerySection) {
+        // If gallery section doesn't exist yet, retry
+        if (attempt < maxAttempts) {
+            setTimeout(() => {
+                scrollToGenerationWithRetry(messageId, attempt + 1, maxAttempts);
+            }, 500);
+        }
+        return;
+    }
+    
+    // Find the generation item that contains this message_id
+    const generationItems = gallerySection.querySelectorAll('.generation-item');
+    let found = false;
+    
+    for (const item of generationItems) {
+        if (item.dataset.messageId === messageId) {
+            found = true;
+            // Calculate the position to center the item
+            const itemRect = item.getBoundingClientRect();
+            const absoluteItemTop = itemRect.top + window.pageYOffset;
+            const middle = absoluteItemTop - (window.innerHeight / 2) + (itemRect.height / 2);
+            
+            // Scroll to center position
+            window.scrollTo({
+                top: middle,
+                behavior: 'smooth'
+            });
+            
+            // Clear the URL parameter
+            window.history.replaceState({}, document.title, '/');
+            break;
+        }
+    }
+    
+    // If not found and haven't exceeded max attempts, retry
+    if (!found && attempt < maxAttempts) {
+        setTimeout(() => {
+            scrollToGenerationWithRetry(messageId, attempt + 1, maxAttempts);
+        }, 500);
+    }
+}
+
+function scrollToGeneration(messageId) {
+    // Legacy function - now uses retry version
+    scrollToGenerationWithRetry(messageId);
 }
 
 function setupModalListeners() {

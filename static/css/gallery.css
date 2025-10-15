@@ -1,0 +1,215 @@
+/* Gallery Page Styles */
+
+/* Prevent scrollbar layout shift */
+html {
+    overflow-y: scroll;
+}
+
+/* Ensure consistent header sizing */
+.header {
+    min-height: 60px;
+}
+
+.header-left svg,
+.header-left i {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.header-icon-btn {
+    width: 36px;
+    height: 36px;
+}
+
+.header-icon-btn svg,
+.header-icon-btn i {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 80px 20px 20px;
+}
+
+/* Grid controls in header */
+.grid-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.grid-control-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    width: 32px;
+    height: 32px;
+}
+
+.grid-control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.grid-control-btn:active {
+    transform: scale(0.95);
+}
+
+.grid-control-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.grid-control-btn:disabled:hover {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    width: 100%;
+    transition: gap 0.3s ease;
+}
+
+/* Dynamic grid columns controlled by data attribute */
+.gallery-grid[data-columns="2"] {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.gallery-grid[data-columns="3"] {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.gallery-grid[data-columns="4"] {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.gallery-grid[data-columns="5"] {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+.gallery-grid[data-columns="6"] {
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.gallery-grid[data-columns="7"] {
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.gallery-grid[data-columns="8"] {
+    grid-template-columns: repeat(8, 1fr);
+}
+
+/* Responsive grid columns */
+@media (min-width: 768px) {
+    .gallery-grid {
+        gap: 20px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .gallery-grid {
+        gap: 24px;
+    }
+}
+
+.gallery-item {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%; /* 1:1 Aspect Ratio */
+    background: #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gallery-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.gallery-item img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Crop to fill square */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-item img.loaded {
+    opacity: 1;
+}
+
+/* Loading skeleton for gallery items */
+.gallery-item.loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        #1a1a1a 0%,
+        #2a2a2a 50%,
+        #1a1a1a 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Empty state */
+.gallery-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+/* Lazy loading observer */
+.gallery-item[data-src] {
+    background: #1a1a1a;
+}
+
+/* Smooth fade-in for newly loaded images */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.gallery-item img.fade-in {
+    animation: fadeIn 0.4s ease-in;
+}

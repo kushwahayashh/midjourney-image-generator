@@ -15,6 +15,7 @@ body {
 
 html {
     scroll-behavior: smooth;
+    overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
 }
 
 .header {
@@ -26,6 +27,7 @@ html {
     border-bottom: 1px solid #333;
     z-index: 100;
     padding: 12px 40px;
+    min-height: 60px;
 }
 
 .header-content {
@@ -41,6 +43,13 @@ html {
     align-items: center;
     gap: 12px;
     color: #fff;
+}
+
+.header-left svg,
+.header-left i {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
 }
 
 .header-title {
@@ -67,8 +76,15 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: auto;
-    height: auto;
+    width: 36px;
+    height: 36px;
+}
+
+.header-icon-btn svg,
+.header-icon-btn i {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
 }
 
 .header-icon-btn:hover {

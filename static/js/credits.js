@@ -3,15 +3,66 @@
  */
 
 let isRefreshing = false;
+const CREDITS_CACHE_KEY = 'vibe_credits_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get cached credits if available and not expired
+ */
+function getCachedCredits() {
+    try {
+        const cached = localStorage.getItem(CREDITS_CACHE_KEY);
+        if (!cached) return null;
+        
+        const { credits, timestamp } = JSON.parse(cached);
+        const now = Date.now();
+        
+        // Check if cache is still valid
+        if (now - timestamp < CACHE_DURATION) {
+            return credits;
+        }
+        
+        // Cache expired
+        localStorage.removeItem(CREDITS_CACHE_KEY);
+        return null;
+    } catch (error) {
+        console.error('Error reading credits cache:', error);
+        return null;
+    }
+}
+
+/**
+ * Cache credits value
+ */
+function setCachedCredits(credits) {
+    try {
+        const cacheData = {
+            credits: credits,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(CREDITS_CACHE_KEY, JSON.stringify(cacheData));
+    } catch (error) {
+        console.error('Error caching credits:', error);
+    }
+}
 
 /**
  * Fetch and display credits from the API
  */
-async function fetchAndDisplayCredits() {
+async function fetchAndDisplayCredits(forceRefresh = false) {
     if (isRefreshing) return;
     
     const creditsElement = document.getElementById('creditsDisplay');
     if (!creditsElement) return;
+    
+    // Try to use cached credits first (unless force refresh)
+    if (!forceRefresh) {
+        const cachedCredits = getCachedCredits();
+        if (cachedCredits !== null) {
+            creditsElement.textContent = cachedCredits;
+            return;
+        }
+    }
     
     try {
         isRefreshing = true;
@@ -21,8 +72,9 @@ async function fetchAndDisplayCredits() {
         const data = await response.json();
         
         if (data.success) {
-            creditsElement.textContent = data.creditsExtra || 0;
-            creditsElement.setAttribute('title', `Extra Credits: ${data.creditsExtra}\nTotal Credits: ${data.credits}\nQuota: ${data.creditsQuota}\nPlan: ${data.type}`);
+            const credits = data.creditsExtra || 0;
+            creditsElement.textContent = credits;
+            setCachedCredits(credits);
         } else {
             creditsElement.textContent = '0';
             console.error('Failed to fetch credits:', data.error);
@@ -41,7 +93,7 @@ async function fetchAndDisplayCredits() {
  */
 function handleCreditsClick() {
     if (!isRefreshing) {
-        fetchAndDisplayCredits();
+        fetchAndDisplayCredits(true); // Force refresh on click
     }
 }
 
@@ -49,5 +101,5 @@ function handleCreditsClick() {
  * Initialize credits display on page load
  */
 document.addEventListener('DOMContentLoaded', () => {
-    fetchAndDisplayCredits();
+    fetchAndDisplayCredits(false); // Use cache if available
 });

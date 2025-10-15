@@ -150,6 +150,44 @@ def get_generations():
 def index():
     return render_template('index.html')
 
+@app.route('/gallery')
+def gallery():
+    return render_template('gallery.html')
+
+@app.route('/api/gallery/images')
+def get_gallery_images():
+    """Get all images flattened for gallery view."""
+    try:
+        images = []
+        
+        if not os.path.exists(OUTPUT_DIR):
+            return jsonify({'images': []})
+        
+        # Get all subdirectories in output folder
+        for folder_name in sorted(os.listdir(OUTPUT_DIR), reverse=True):
+            folder_path = os.path.join(OUTPUT_DIR, folder_name)
+            metadata_path = os.path.join(folder_path, 'metadata.json')
+            
+            if os.path.isdir(folder_path) and os.path.exists(metadata_path):
+                try:
+                    with open(metadata_path, 'r', encoding='utf-8') as f:
+                        metadata = json.load(f)
+                        # Add all images from this generation to the flat list
+                        for img_url in metadata.get('images', []):
+                            images.append({
+                                'url': img_url,
+                                'timestamp': metadata.get('timestamp', ''),
+                                'prompt': metadata.get('prompt', ''),
+                                'message_id': metadata.get('message_id', '')
+                            })
+                except Exception as e:
+                    print(f"Error reading metadata from {folder_name}: {e}")
+        
+        return jsonify({'images': images})
+    except Exception as e:
+        print(f"Error getting gallery images: {e}")
+        return jsonify({'images': [], 'error': str(e)}), 500
+
 @app.route('/generate', methods=['POST'])
 def generate():
     """Start a new image generation request."""

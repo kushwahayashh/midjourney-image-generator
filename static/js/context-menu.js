@@ -131,6 +131,19 @@ class ContextMenu {
     }
 
     show(event, targetElement) {
+        // If menu is already active, hide it first and wait for animation
+        if (this.menu.classList.contains('active')) {
+            this.hide();
+            // Wait for hide animation to complete before showing new menu
+            setTimeout(() => {
+                this.showMenu(event, targetElement);
+            }, 150); // Match the CSS transition duration
+        } else {
+            this.showMenu(event, targetElement);
+        }
+    }
+
+    showMenu(event, targetElement) {
         this.currentTarget = targetElement;
         
         // Build menu items
