@@ -1,8 +1,14 @@
 # Vibe - Midjourney Image Generator
 
-A modern, feature-rich web application for generating AI images using the ImaginePro API (Midjourney-style). Built with Flask and vanilla JavaScript, featuring a beautiful dark-themed UI and comprehensive image manipulation capabilities.
+A modern, feature-rich web application for generating AI images using the ImaginePro API (Midjourney-style). Built with Flask and vanilla JavaScript, featuring a beautiful dark-themed UI, dedicated gallery view, and comprehensive image manipulation capabilities.
 
-![Vibe AI Image Generator](readme%20images/image.png)
+## 📸 Screenshots
+
+### Main Page
+![Main Page - Generation Interface](readme%20images/main.png)
+
+### Gallery View
+![Gallery View - Image Management](readme%20images/gallery.png)
 
 ## ✨ Features
 
@@ -20,6 +26,10 @@ A modern, feature-rich web application for generating AI images using the Imagin
 - 📜 **Generation History** - Complete gallery with timestamps and prompts
 - 🔔 **Toast Notifications** - Clean, non-intrusive feedback for all actions
 - 🎯 **Context Menus** - Right-click on images or generations for quick actions
+- 🖼️ **Dedicated Gallery Page** - Separate view for browsing all generated images
+- 🔍 **Lazy Loading** - Optimized image loading for better performance
+- 🔎 **Zoom Controls** - Adjust gallery grid size with +/- buttons (2-8 columns)
+- 💾 **Persistent Preferences** - Gallery zoom level saved in browser
 
 ### Advanced Features
 - 🔢 **Smart Image Indexing** - Correctly maps UI positions to API button indices
@@ -80,8 +90,18 @@ A modern, feature-rich web application for generating AI images using the Imagin
 3. Watch the real-time progress as your images are created (4 images per generation)
 4. Images automatically appear in the gallery when complete
 
+### Gallery View
+- Click the **Gallery** icon in the header to access the dedicated gallery page
+- **Zoom Controls**: Use **+** to zoom in (fewer, larger images) or **-** to zoom out (more, smaller images)
+- **Range**: Adjust from 2 to 8 columns per row
+- **Context Menu**: Right-click any image to access quick actions:
+  - **Download Image** - Save to your downloads folder
+  - **Copy URL** - Copy image URL to clipboard
+  - **Open in App** - Navigate to the image in the main page with smart retry logic
+- Your zoom preference is automatically saved
+
 ### Upscaling & Variations
-**Right-click on any image** to access:
+**Right-click on any image** (on main page) to access:
 - **Upscale Image** - Generate a higher resolution version (U1-U4)
 - **Create Variation** - Generate 4 new variations of the selected image (V1-V4)
 - **Download Image** - Save the image to your downloads folder
@@ -106,11 +126,11 @@ A modern, feature-rich web application for generating AI images using the Imagin
 vibe/
 ├── app.py                         # Flask backend server & API routes
 ├── imageactions.py                # Image upscale/variation logic (refactored)
+├── credits.py                     # Credits management system
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variables template
 ├── .env                          # Your API key (not in git)
 ├── .gitignore                    # Git ignore rules
-├── image indexing fix.md         # Documentation for image indexing issue
 ├── output/                       # Generated images (auto-created)
 │   └── [timestamp_messageId]/   # Each generation in separate folder
 │       ├── image_1.png          # Generated images
@@ -119,25 +139,29 @@ vibe/
 │       ├── image_4.png
 │       └── metadata.json        # Generation metadata & API response
 ├── templates/
-│   └── index.html               # Main HTML template
+│   ├── index.html               # Main page template
+│   └── gallery.html             # Gallery page template
 └── static/
     ├── css/
     │   ├── style.css            # Core app styles
     │   ├── skeleton.css         # Loading animations
-    │   ├── context-menu.css     # Generation context menu styles
+    │   ├── gallery.css          # Gallery page styles with grid controls
+    │   ├── context-menu.css     # Context menu styles (shared)
     │   ├── image-context-menu.css # Image context menu styles
+    │   ├── credits.css          # Credits display styles
     │   ├── toast.css            # Notification styles
-    │   ├── input-box.css        # Input component styles
-    │   └── settings-modal.css   # Settings modal styles
+    │   └── input-box.css        # Input component styles
     └── js/
-        ├── app.js               # Main application logic & state management
+        ├── app.js               # Main page logic & state management
+        ├── gallery.js           # Gallery page logic with lazy loading
         ├── button-actions.js    # Upscale/variation handlers
         ├── skeleton.js          # Loading skeleton utilities
         ├── context-menu.js      # Generation context menu
         ├── image-context-menu.js # Image right-click menu (with indexing fix)
+        ├── credits.js           # Credits management
+        ├── search.js            # Universal search functionality
         ├── toast.js             # Toast notification system
-        ├── input-box.js         # Input component logic
-        └── settings-modal.js    # Settings modal (future use)
+        └── input-box.js         # Input component logic
 ```
 
 ## Security Notes
@@ -204,6 +228,7 @@ See `image indexing fix.md` for detailed documentation.
 
 **Frontend Routes:**
 - `GET /` - Main application page
+- `GET /gallery` - Gallery page
 - `GET /output/<path>` - Serve generated images
 
 **API Routes:**
@@ -211,7 +236,9 @@ See `image indexing fix.md` for detailed documentation.
 - `GET /status/<message_id>` - Check generation status
 - `POST /button` - Handle upscale/variation actions
 - `GET /api/generations` - Get all past generations
+- `GET /api/gallery/images` - Get all images for gallery view
 - `DELETE /api/generations/<message_id>` - Delete a generation
+- `GET /api/credits` - Get current credit balance
 
 ### State Management
 The application uses a centralized `AppState` object to track:
@@ -249,7 +276,17 @@ to use a different port, e.g., `port=5001`
 
 ## 📝 Recent Updates
 
-### Latest Changes (v1.0)
+### Latest Changes (v2.0)
+- ✅ **Dedicated Gallery Page** - New separate gallery view for browsing all images
+- ✅ **Lazy Loading** - Optimized image loading on both main and gallery pages
+- ✅ **Zoom Controls** - Adjustable grid layout (2-8 columns) with persistent preferences
+- ✅ **Smart Navigation** - "Open in App" with retry logic for slow connections
+- ✅ **Gallery Context Menu** - Download and copy URL directly from gallery
+- ✅ **Improved Image Loading** - Fixed skeleton loader issue with newly generated images
+- ✅ **Credits System** - Real-time credit balance display
+- ✅ **Search Functionality** - Universal search across both pages
+
+### Previous Updates (v1.0)
 - ✅ Fixed image indexing for upscale/variation operations
 - ✅ Refactored upscale/variation code into `imageactions.py`
 - ✅ Added intelligent menu filtering (hides options for upscaled images)
