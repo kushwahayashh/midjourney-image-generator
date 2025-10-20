@@ -372,6 +372,15 @@ function createGalleryItem(imageData, index) {
     img.loading = 'lazy'; // Native lazy loading as fallback
     
     item.appendChild(img);
+
+    // Open shared image modal on click with full batch and current index
+    item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const urls = GalleryState.images.map(i => i.url);
+        if (typeof openModal === 'function') {
+            openModal(imageData.url, urls, index);
+        }
+    });
     
     return item;
 }

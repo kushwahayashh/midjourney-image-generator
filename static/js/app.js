@@ -493,6 +493,10 @@ function openModal(imageUrl, allImages = [imageUrl], currentIndex = 0) {
     AppState.modalState.currentImages = allImages;
     AppState.modalState.currentIndex = currentIndex;
     
+    // Ensure previous closing state is cleared before showing
+    modal.classList.remove('closing');
+    modalImg.classList.remove('closing');
+
     modal.classList.add('active');
     modalImg.src = imageUrl;
     
@@ -511,13 +515,44 @@ function openModal(imageUrl, allImages = [imageUrl], currentIndex = 0) {
 function closeModal() {
     const modal = document.getElementById('imageModal');
     if (!modal) return;
-    
-    modal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-    
-    // Clear modal state
-    AppState.modalState.currentImages = [];
-    AppState.modalState.currentIndex = 0;
+
+    // If not open or already closing, do nothing
+    if (!modal.classList.contains('active') || modal.classList.contains('closing')) {
+        return;
+    }
+
+    const modalImg = document.getElementById('modalImage');
+
+    // Add closing classes to trigger CSS ease-out animations
+    modal.classList.add('closing');
+    if (modalImg) modalImg.classList.add('closing');
+
+    const cleanup = () => {
+        // Remove active and closing states after animation ends
+        modal.classList.remove('active');
+        modal.classList.remove('closing');
+        if (modalImg) modalImg.classList.remove('closing');
+
+        document.body.style.overflow = 'auto';
+
+        // Clear modal state
+        AppState.modalState.currentImages = [];
+        AppState.modalState.currentIndex = 0;
+
+        // Remove listeners to avoid leaks
+        modal.removeEventListener('animationend', onAnimEnd);
+    };
+
+    const onAnimEnd = (e) => {
+        // Only clean up when the modal's own fadeOut animation finishes
+        if (e.target === modal) {
+            cleanup();
+        }
+    };
+
+    // Listen for animation end; provide a timeout fallback
+    modal.addEventListener('animationend', onAnimEnd, { once: true });
+    setTimeout(cleanup, 300); // Fallback in case animationend doesn't fire
 }
 
 function navigateModal(direction) {

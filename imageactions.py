@@ -4,7 +4,6 @@ Handles upscale and variation operations for generated images.
 """
 
 import requests
-import os
 
 
 def process_button_action(message_id, button, api_key, base_url):

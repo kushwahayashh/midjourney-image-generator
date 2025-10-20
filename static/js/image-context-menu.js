@@ -67,7 +67,7 @@ class ImageContextMenu {
             // Wait for hide animation to complete before showing new menu
             setTimeout(() => {
                 this.showMenu(event, targetElement, imageUrl);
-            }, 150); // Match the CSS transition duration
+            }, 200); // Match the CSS transition duration
         } else {
             this.showMenu(event, targetElement, imageUrl);
         }

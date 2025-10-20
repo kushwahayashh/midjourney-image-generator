@@ -4,7 +4,6 @@ Handles fetching and displaying account credits information.
 """
 
 import requests
-import os
 
 
 def get_account_credits(api_key):

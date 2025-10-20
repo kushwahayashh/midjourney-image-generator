@@ -29,13 +29,37 @@ MAX_PROMPT_LENGTH = 1000
 # Create output directory if it doesn't exist
 Path(OUTPUT_DIR).mkdir(exist_ok=True)
 
-def generate_image(prompt):
-    """Generate an image from a text prompt."""
+def _ensure_api_key():
     if not API_KEY:
         raise ValueError("API key not configured")
+
+def _headers(json_body=False):
+    h = {'Authorization': f'Bearer {API_KEY}'}
+    if json_body:
+        h['Content-Type'] = 'application/json'
+    return h
+
+def _list_generations_metadata():
+    generations = []
+    if not os.path.exists(OUTPUT_DIR):
+        return generations
+    for folder_name in sorted(os.listdir(OUTPUT_DIR), reverse=True):
+        folder_path = os.path.join(OUTPUT_DIR, folder_name)
+        metadata_path = os.path.join(folder_path, 'metadata.json')
+        if os.path.isdir(folder_path) and os.path.exists(metadata_path):
+            try:
+                with open(metadata_path, 'r', encoding='utf-8') as f:
+                    generations.append(json.load(f))
+            except Exception as e:
+                print(f"Error reading metadata from {folder_name}: {e}")
+    return generations
+
+def generate_image(prompt):
+    """Generate an image from a text prompt."""
+    _ensure_api_key()
     
     url = f"{BASE_URL}/nova/imagine"
-    headers = {'Authorization': f'Bearer {API_KEY}', 'Content-Type': 'application/json'}
+    headers = _headers(json_body=True)
     payload = {"prompt": prompt, "timeout": 900}
 
     try:
@@ -49,11 +73,10 @@ def generate_image(prompt):
 
 def get_status(message_id):
     """Get the status of an image generation request."""
-    if not API_KEY:
-        raise ValueError("API key not configured")
+    _ensure_api_key()
     
     url = f"{BASE_URL}/message/fetch/{message_id}"
-    headers = {'Authorization': f'Bearer {API_KEY}'}
+    headers = _headers()
     
     try:
         resp = requests.get(url, headers=headers, timeout=30)
@@ -79,9 +102,10 @@ def save_images(message_id, image_urls, prompt, raw_data):
                 response.raise_for_status()
                 
                 # Determine file extension from URL or default to png
-                ext = 'png'
-                if '.' in img_url.split('/')[-1]:
-                    ext = img_url.split('.')[-1].split('?')[0] or 'png'
+                filename_from_url = img_url.split('/')[-1]
+                filename_clean = filename_from_url.split('?')[0]
+                _, ext = os.path.splitext(filename_clean)
+                ext = (ext.lstrip('.') or 'png')
                 
                 filename = f"image_{idx + 1}.{ext}"
                 filepath = os.path.join(task_folder, filename)
@@ -123,24 +147,7 @@ def serve_output(filename):
 def get_generations():
     """Get all past generations from output folder."""
     try:
-        generations = []
-        
-        if not os.path.exists(OUTPUT_DIR):
-            return jsonify({'generations': []})
-        
-        # Get all subdirectories in output folder
-        for folder_name in sorted(os.listdir(OUTPUT_DIR), reverse=True):
-            folder_path = os.path.join(OUTPUT_DIR, folder_name)
-            metadata_path = os.path.join(folder_path, 'metadata.json')
-            
-            if os.path.isdir(folder_path) and os.path.exists(metadata_path):
-                try:
-                    with open(metadata_path, 'r', encoding='utf-8') as f:
-                        metadata = json.load(f)
-                        generations.append(metadata)
-                except Exception as e:
-                    print(f"Error reading metadata from {folder_name}: {e}")
-        
+        generations = _list_generations_metadata()
         return jsonify({'generations': generations})
     except Exception as e:
         print(f"Error getting generations: {e}")
@@ -159,30 +166,14 @@ def get_gallery_images():
     """Get all images flattened for gallery view."""
     try:
         images = []
-        
-        if not os.path.exists(OUTPUT_DIR):
-            return jsonify({'images': []})
-        
-        # Get all subdirectories in output folder
-        for folder_name in sorted(os.listdir(OUTPUT_DIR), reverse=True):
-            folder_path = os.path.join(OUTPUT_DIR, folder_name)
-            metadata_path = os.path.join(folder_path, 'metadata.json')
-            
-            if os.path.isdir(folder_path) and os.path.exists(metadata_path):
-                try:
-                    with open(metadata_path, 'r', encoding='utf-8') as f:
-                        metadata = json.load(f)
-                        # Add all images from this generation to the flat list
-                        for img_url in metadata.get('images', []):
-                            images.append({
-                                'url': img_url,
-                                'timestamp': metadata.get('timestamp', ''),
-                                'prompt': metadata.get('prompt', ''),
-                                'message_id': metadata.get('message_id', '')
-                            })
-                except Exception as e:
-                    print(f"Error reading metadata from {folder_name}: {e}")
-        
+        for metadata in _list_generations_metadata():
+            for img_url in metadata.get('images', []):
+                images.append({
+                    'url': img_url,
+                    'timestamp': metadata.get('timestamp', ''),
+                    'prompt': metadata.get('prompt', ''),
+                    'message_id': metadata.get('message_id', '')
+                })
         return jsonify({'images': images})
     except Exception as e:
         print(f"Error getting gallery images: {e}")

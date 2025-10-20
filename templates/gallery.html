@@ -55,6 +55,20 @@
         </div>
     </div>
 
+    <!-- Shared Image Modal (same structure as on index page) -->
+    <div id="imageModal" class="modal" onclick="closeModal()" role="dialog" aria-modal="true" aria-label="Image preview">
+        <span class="modal-close" onclick="closeModal()" aria-label="Close modal">&times;</span>
+        <button class="modal-nav modal-nav-prev" onclick="event.stopPropagation(); navigateModal(-1)" aria-label="Previous image">
+            <i data-lucide="chevron-left" width="32" height="32"></i>
+        </button>
+        <img id="modalImage" class="modal-content" onclick="event.stopPropagation()" alt="Full size generated image">
+        <button class="modal-nav modal-nav-next" onclick="event.stopPropagation(); navigateModal(1)" aria-label="Next image">
+            <i data-lucide="chevron-right" width="32" height="32"></i>
+        </button>
+    </div>
+
+    <!-- Reuse modal/open/close/navigation from home page -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script src="{{ url_for('static', filename='js/credits.js') }}"></script>
     <script src="{{ url_for('static', filename='js/gallery.js') }}"></script>
 </body>

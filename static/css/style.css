@@ -310,6 +310,25 @@ h1 {
     to { transform: scale(1); }
 }
 
+/* Closing animations */
+.modal.closing {
+    animation: fadeOut 0.2s ease-out forwards;
+}
+
+.modal-content.closing {
+    animation: zoomOut 0.2s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes zoomOut {
+    from { transform: scale(1); }
+    to { transform: scale(0.95); }
+}
+
 .modal-close {
     position: absolute;
     top: 20px;
