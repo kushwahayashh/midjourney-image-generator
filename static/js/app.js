@@ -671,20 +671,23 @@ function setupLazyLoadObserver() {
 function checkGenerationParameter() {
     const urlParams = new URLSearchParams(window.location.search);
     const generationId = urlParams.get('generation');
+    // Accept both 'img' and legacy 'index' params
+    const imgIndexParam = urlParams.get('img') ?? urlParams.get('index');
+    const imgIndex = imgIndexParam != null ? parseInt(imgIndexParam, 10) : null;
     
     if (generationId) {
         // Start trying to scroll to the generation with retry logic
-        scrollToGenerationWithRetry(generationId);
+        scrollToGenerationWithRetry(generationId, 0, 20, imgIndex);
     }
 }
 
-function scrollToGenerationWithRetry(messageId, attempt = 0, maxAttempts = 20) {
+function scrollToGenerationWithRetry(messageId, attempt = 0, maxAttempts = 20, imgIndex = null) {
     const gallerySection = document.getElementById('gallerySection');
     if (!gallerySection) {
         // If gallery section doesn't exist yet, retry
         if (attempt < maxAttempts) {
             setTimeout(() => {
-                scrollToGenerationWithRetry(messageId, attempt + 1, maxAttempts);
+                scrollToGenerationWithRetry(messageId, attempt + 1, maxAttempts, imgIndex);
             }, 500);
         }
         return;
@@ -697,16 +700,45 @@ function scrollToGenerationWithRetry(messageId, attempt = 0, maxAttempts = 20) {
     for (const item of generationItems) {
         if (item.dataset.messageId === messageId) {
             found = true;
-            // Calculate the position to center the item
-            const itemRect = item.getBoundingClientRect();
-            const absoluteItemTop = itemRect.top + window.pageYOffset;
-            const middle = absoluteItemTop - (window.innerHeight / 2) + (itemRect.height / 2);
-            
-            // Scroll to center position
-            window.scrollTo({
-                top: middle,
-                behavior: 'smooth'
-            });
+            let targetElement = item;
+
+            // If a specific image index is provided, try to target that card
+            if (imgIndex != null) {
+                const cards = item.querySelectorAll('.images-grid .image-card');
+                if (cards && cards.length > 0) {
+                    const clamped = Math.max(0, Math.min(cards.length - 1, imgIndex));
+                    targetElement = cards[clamped];
+                }
+            }
+
+            // Cross-browser centering in viewport
+            if (typeof targetElement.scrollIntoView === 'function') {
+                try {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                } catch (_) {
+                    // Fallback behavior
+                    targetElement.scrollIntoView(true);
+                }
+            }
+
+            // Re-center shortly after to account for late layout/lazy image load
+            setTimeout(() => {
+                try { targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (_) {}
+            }, 120);
+
+            // If the card contains an img that loads later, center again on load
+            const imgEl = targetElement.querySelector('img');
+            if (imgEl && !imgEl.complete) {
+                const onImgLoad = () => {
+                    try { targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (_) {}
+                    imgEl.removeEventListener('load', onImgLoad);
+                };
+                imgEl.addEventListener('load', onImgLoad);
+            }
+
+            // Apply temporary highlight to the target element
+            targetElement.classList.add('target-highlight');
+            setTimeout(() => targetElement.classList.remove('target-highlight'), 1800);
             
             // Clear the URL parameter
             window.history.replaceState({}, document.title, '/');
@@ -717,7 +749,7 @@ function scrollToGenerationWithRetry(messageId, attempt = 0, maxAttempts = 20) {
     // If not found and haven't exceeded max attempts, retry
     if (!found && attempt < maxAttempts) {
         setTimeout(() => {
-            scrollToGenerationWithRetry(messageId, attempt + 1, maxAttempts);
+            scrollToGenerationWithRetry(messageId, attempt + 1, maxAttempts, imgIndex);
         }, 500);
     }
 }

@@ -65,7 +65,8 @@ class GalleryContextMenu {
                 const imageData = {
                     url: galleryItem.dataset.src,
                     message_id: galleryItem.dataset.messageId,
-                    timestamp: galleryItem.dataset.timestamp
+                    timestamp: galleryItem.dataset.timestamp,
+                    index: parseInt(galleryItem.dataset.index || '0', 10)
                 };
                 
                 this.show(e, galleryItem, imageData);
@@ -251,8 +252,19 @@ class GalleryContextMenu {
             return;
         }
         
-        // Navigate to home page with generation parameter
-        window.location.href = `/?generation=${imageData.message_id}`;
+        // Determine within-generation index from filename pattern image_N.ext
+        let withinIndex = 0;
+        try {
+            if (imageData.url) {
+                const match = imageData.url.match(/image_(\d+)\./i);
+                if (match) {
+                    withinIndex = Math.max(0, parseInt(match[1], 10) - 1);
+                }
+            }
+        } catch (_) {}
+
+        // Navigate to home page with generation parameter and within-generation image index
+        window.location.href = `/?generation=${imageData.message_id}&img=${withinIndex}`;
     }
 }
 
