@@ -165,6 +165,7 @@ class ImageContextMenu {
                     label: 'Upscale Image',
                     action: (url, element) => this.upscaleImage(url, element)
                 },
+                { divider: true },
                 {
                     icon: 'copy',
                     label: 'Create Variation',
@@ -181,6 +182,7 @@ class ImageContextMenu {
                 label: 'Download Image',
                 action: (url) => this.downloadImage(url)
             },
+            { divider: true },
             {
                 icon: 'link',
                 label: 'Copy Image URL',

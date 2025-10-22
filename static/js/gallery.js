@@ -173,6 +173,9 @@ class GalleryContextMenu {
                 action: (data) => this.downloadImage(data)
             },
             {
+                divider: true
+            },
+            {
                 icon: 'link',
                 label: 'Copy URL',
                 action: (data) => this.copyUrl(data)

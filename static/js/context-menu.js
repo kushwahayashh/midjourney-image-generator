@@ -232,6 +232,7 @@ class ContextMenu {
                 label: 'Copy Prompt',
                 action: (el) => this.copyPrompt(el)
             },
+            { divider: true },
             {
                 icon: 'edit-3',
                 label: 'Edit Prompt',
