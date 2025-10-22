@@ -83,7 +83,7 @@ textarea {
     scrollbar-width: none;
 }
 
-button {
+.input-section button {
     flex-shrink: 0;
     width: 38px;
     height: 38px;
@@ -102,7 +102,7 @@ button {
     overflow: hidden;
 }
 
-button::before {
+.input-section button::before {
     content: '';
     position: absolute;
     top: 0;
@@ -114,7 +114,7 @@ button::before {
     transition: opacity 0.2s ease;
 }
 
-button:hover:not(:disabled)::before {
+.input-section button:hover:not(:disabled)::before {
     opacity: 1;
 }
 
@@ -124,22 +124,22 @@ button:hover:not(:disabled)::before {
     font-size: 22px;
 }
 
-button:hover:not(:disabled) {
+.input-section button:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.12);
     transform: scale(1.05);
 }
 
-button:active:not(:disabled) {
+.input-section button:active:not(:disabled) {
     transform: scale(0.95);
 }
 
-button:disabled {
+.input-section button:disabled {
     opacity: 0.3;
     cursor: not-allowed;
     background: transparent;
     color: #666;
 }
 
-button:disabled::before {
+.input-section button:disabled::before {
     display: none;
 }
