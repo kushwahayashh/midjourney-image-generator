@@ -201,7 +201,7 @@ html {
 }
 
 /* Smooth fade-in for newly loaded images */
-@keyframes fadeIn {
+@keyframes galleryFadeIn {
     from {
         opacity: 0;
     }
@@ -211,5 +211,5 @@ html {
 }
 
 .gallery-item img.fade-in {
-    animation: fadeIn 0.4s ease-in;
+    animation: galleryFadeIn 0.4s ease-in;
 }

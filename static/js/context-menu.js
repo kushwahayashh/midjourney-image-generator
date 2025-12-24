@@ -379,11 +379,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.contextMenuManager = new ContextMenu();
 });
 
-// Re-attach context menu when gallery is updated
-const originalLoadGenerations = window.loadGenerations;
-if (originalLoadGenerations) {
-    window.loadGenerations = function() {
-        originalLoadGenerations.apply(this, arguments);
-        // Context menu uses event delegation, so no need to re-attach
-    };
-}
+// Note: Context menu uses event delegation on #gallerySection,
+// so it automatically handles dynamically added generation items.
+// No need to wrap loadGenerations or re-attach listeners.

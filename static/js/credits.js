@@ -72,9 +72,10 @@ async function fetchAndDisplayCredits(forceRefresh = false) {
         const data = await response.json();
         
         if (data.success) {
-            const credits = data.creditsExtra || 0;
-            creditsElement.textContent = credits;
-            setCachedCredits(credits);
+            // Display total available credits (subscription credits + extra credits)
+            const totalCredits = (data.credits || 0) + (data.creditsExtra || 0);
+            creditsElement.textContent = totalCredits;
+            setCachedCredits(totalCredits);
         } else {
             creditsElement.textContent = '0';
             console.error('Failed to fetch credits:', data.error);

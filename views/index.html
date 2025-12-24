@@ -10,14 +10,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/skeleton.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/context-menu.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/image-context-menu.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/input-box.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/credits.css') }}">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/skeleton.css">
+    <link rel="stylesheet" href="/css/context-menu.css">
+    <link rel="stylesheet" href="/css/image-context-menu.css">
+    <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="/css/input-box.css">
+    <link rel="stylesheet" href="/css/credits.css">
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -73,13 +74,13 @@
         </button>
     </div>
 
-    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/skeleton.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/button-actions.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/context-menu.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/image-context-menu.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/input-box.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/credits.js') }}"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/skeleton.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/button-actions.js"></script>
+    <script src="/js/context-menu.js"></script>
+    <script src="/js/image-context-menu.js"></script>
+    <script src="/js/input-box.js"></script>
+    <script src="/js/credits.js"></script>
 </body>
 </html>

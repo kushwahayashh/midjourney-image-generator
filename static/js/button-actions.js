@@ -1,4 +1,4 @@
-// Button Actions - Upscale & Variation Handler
+// Button Actions - Upscale & Variation Handler with WebSocket support
 
 async function handleButtonAction(messageId, button, imageIndex, originalPrompt) {
     /**
@@ -32,44 +32,54 @@ async function handleButtonAction(messageId, button, imageIndex, originalPrompt)
             showSkeletonInGallery(displayPrompt, imageCount, skeletonId);
         }
         
-        // Make API request to button endpoint
-        const response = await fetch('/button', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        // Use WebSocket if connected, otherwise fall back to REST API
+        if (typeof AppState !== 'undefined' && AppState.socket && AppState.socket.connected) {
+            // Emit button action via WebSocket
+            AppState.socket.emit('button_action', {
                 messageId: messageId,
                 button: button,
-                prompt: originalPrompt
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to process button action');
-        }
-        
-        const newMessageId = data.message_id;
-        const newPrompt = data.prompt;
-        
-        // Track this generation in app state
-        if (typeof AppState !== 'undefined') {
-            AppState.activeGenerations.set(newMessageId, {
-                prompt: newPrompt,
-                skeletonId: skeletonId,
-                pollTimeoutId: null
+                originalPrompt: originalPrompt,
+                skeletonId: skeletonId
             });
-        }
-        
-        // Start polling for the new generation
-        if (typeof pollStatus === 'function') {
-            pollStatus(newMessageId);
-        }
-        
-        if (window.toast) {
-            window.toast.success('Request sent', `${actionType} in progress`);
+        } else {
+            // Fallback to REST API + polling
+            const response = await fetch('/button', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messageId: messageId,
+                    button: button,
+                    prompt: originalPrompt
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to process button action');
+            }
+            
+            const newMessageId = data.message_id;
+            const newPrompt = data.prompt;
+            
+            // Track this generation in app state
+            if (typeof AppState !== 'undefined') {
+                AppState.activeGenerations.set(newMessageId, {
+                    prompt: newPrompt,
+                    skeletonId: skeletonId
+                });
+            }
+            
+            // Start polling for the new generation (fallback mode)
+            if (typeof pollStatus === 'function') {
+                pollStatus(newMessageId);
+            }
+            
+            if (window.toast) {
+                window.toast.success('Request sent', `${actionType} in progress`);
+            }
         }
         
     } catch (error) {

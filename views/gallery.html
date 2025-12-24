@@ -10,11 +10,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/gallery.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/context-menu.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/credits.css') }}">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/gallery.css">
+    <link rel="stylesheet" href="/css/context-menu.css">
+    <link rel="stylesheet" href="/css/credits.css">
+    <link rel="stylesheet" href="/css/toast.css">
+    <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -67,9 +69,11 @@
         </button>
     </div>
 
+    <!-- Toast notifications -->
+    <script src="/js/toast.js"></script>
     <!-- Reuse modal/open/close/navigation from home page -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/credits.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/gallery.js') }}"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/credits.js"></script>
+    <script src="/js/gallery.js"></script>
 </body>
 </html>

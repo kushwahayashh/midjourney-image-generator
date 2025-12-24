@@ -1,6 +1,6 @@
 # Vibe - Midjourney Image Generator
 
-A modern, feature-rich web application for generating AI images using the ImaginePro API (Midjourney-style). Built with Flask and vanilla JavaScript, featuring a beautiful dark-themed UI, dedicated gallery view, and comprehensive image manipulation capabilities.
+A modern, feature-rich web application for generating AI images using the ImaginePro API (Midjourney-style). Now with **Node.js + Socket.io** for real-time WebSocket updates, eliminating the need for polling.
 
 ## 📸 Screenshots
 
@@ -20,7 +20,7 @@ A modern, feature-rich web application for generating AI images using the Imagin
 - 💾 **Automatic Saving** - All generations saved locally with complete metadata
 
 ### User Experience
-- ⚡ **Real-time Progress** - Live status updates with animated skeleton loaders
+- ⚡ **Real-time WebSocket Updates** - Live progress via Socket.io (no more polling!)
 - 🖼️ **Modal Image Viewer** - Full-screen preview with keyboard navigation
 - ⬅️➡️ **Batch Navigation** - Browse through image sets with arrow keys or buttons
 - 📜 **Generation History** - Complete gallery with timestamps and prompts
@@ -43,7 +43,7 @@ A modern, feature-rich web application for generating AI images using the Imagin
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- **Node.js 18+**
 - ImaginePro API key ([Get one here](https://imaginepro.ai))
 
 ### Installation
@@ -52,7 +52,7 @@ A modern, feature-rich web application for generating AI images using the Imagin
 
 2. **Install dependencies:**
    ```bash
-   pip install -r requirements.txt
+   npm install
    ```
 
 3. **Configure API key:**
@@ -68,15 +68,13 @@ A modern, feature-rich web application for generating AI images using the Imagin
    ```
 
 4. **Run the application:**
-   
-   **Option A - Using the launcher (Windows):**
    ```bash
-   run.bat
+   npm start
    ```
    
-   **Option B - Manual:**
+   For development with auto-reload:
    ```bash
-   python app.py
+   npm run dev
    ```
 
 5. **Open your browser:**
@@ -124,10 +122,8 @@ A modern, feature-rich web application for generating AI images using the Imagin
 
 ```
 vibe/
-├── app.py                         # Flask backend server & API routes
-├── imageactions.py                # Image upscale/variation logic (refactored)
-├── credits.py                     # Credits management system
-├── requirements.txt               # Python dependencies
+├── server.js                      # Node.js/Express/Socket.io server
+├── package.json                   # Node.js dependencies
 ├── .env.example                   # Environment variables template
 ├── .env                          # Your API key (not in git)
 ├── .gitignore                    # Git ignore rules
@@ -138,7 +134,7 @@ vibe/
 │       ├── image_3.png
 │       ├── image_4.png
 │       └── metadata.json        # Generation metadata & API response
-├── templates/
+├── views/                        # HTML templates
 │   ├── index.html               # Main page template
 │   └── gallery.html             # Gallery page template
 └── static/
@@ -152,14 +148,13 @@ vibe/
     │   ├── toast.css            # Notification styles
     │   └── input-box.css        # Input component styles
     └── js/
-        ├── app.js               # Main page logic & state management
+        ├── app.js               # Main page logic with WebSocket support
         ├── gallery.js           # Gallery page logic with lazy loading
         ├── button-actions.js    # Upscale/variation handlers
         ├── skeleton.js          # Loading skeleton utilities
         ├── context-menu.js      # Generation context menu
         ├── image-context-menu.js # Image right-click menu (with indexing fix)
         ├── credits.js           # Credits management
-        ├── search.js            # Universal search functionality
         ├── toast.js             # Toast notification system
         └── input-box.js         # Input component logic
 ```
@@ -172,7 +167,8 @@ vibe/
 
 ## Technologies Used
 
-- **Backend:** Flask (Python) - Lightweight web server
+- **Backend:** Node.js + Express + Socket.io
+- **Real-time:** Socket.io WebSockets
 - **Frontend:** Vanilla JavaScript - No frameworks, pure JS
 - **Styling:** CSS3 - Custom modular design system
 - **Icons:** Lucide Icons - Beautiful, consistent iconography
@@ -185,12 +181,13 @@ vibe/
 This project follows a **modular component-based architecture** with clear separation of concerns:
 
 ### Backend Structure
-- **`app.py`** - Flask routes and core API endpoints
-- **`imageactions.py`** - Isolated upscale/variation logic (refactored for maintainability)
-- Clean separation between routing and business logic
+- **`server.js`** - Express routes + Socket.io WebSocket handlers
+- Real-time progress updates pushed to clients
+- No polling required - server pushes updates automatically
 
 ### Frontend Structure
 - **Component-based JS** - Each feature in its own module
+- **WebSocket-first** - Falls back to polling if WebSocket unavailable
 - **Modular CSS** - Separate stylesheets for each component
 - **Event-driven** - Uses event delegation for dynamic content
 - **State management** - Centralized AppState in `app.js`
@@ -199,9 +196,10 @@ This project follows a **modular component-based architecture** with clear separ
 - **Separation of Concerns** - Backend logic separated from frontend
 - **DRY Principle** - Reusable functions for common operations
 - **Error Handling** - Comprehensive try-catch blocks with user feedback
-- **Progressive Enhancement** - Works without JavaScript for basic functionality
+- **Progressive Enhancement** - Falls back gracefully if WebSocket unavailable
 
 ### Benefits
+- ✅ **Real-time updates** - No more polling delays
 - ✅ **Easy to maintain** - Find and fix issues quickly
 - ✅ **Reusable** - Components can be used in other projects
 - ✅ **Scalable** - Add new features without touching existing code
@@ -210,6 +208,19 @@ This project follows a **modular component-based architecture** with clear separ
 - ✅ **Well-documented** - Comprehensive docstrings and comments
 
 ## 🔧 Technical Details
+
+### WebSocket Events (Node.js)
+
+**Client → Server:**
+- `generate` - Start new image generation
+- `button_action` - Request upscale/variation
+
+**Server → Client:**
+- `generation_started` - Confirms generation started
+- `progress` - Real-time progress updates
+- `generation_complete` - Images ready
+- `generation_failed` - Generation failed
+- `error` - Error occurred
 
 ### Image Indexing Fix
 The API provider returns images in a 2x2 grid with vertical ordering (column-first), but we display them horizontally. The `image-context-menu.js` includes a mapping system to correctly translate UI positions to API button indices:
@@ -233,7 +244,7 @@ See `image indexing fix.md` for detailed documentation.
 
 **API Routes:**
 - `POST /generate` - Start new image generation
-- `GET /status/<message_id>` - Check generation status
+- `GET /status/<message_id>` - Check generation status (fallback)
 - `POST /button` - Handle upscale/variation actions
 - `GET /api/generations` - Get all past generations
 - `GET /api/gallery/images` - Get all images for gallery view
@@ -244,7 +255,7 @@ See `image indexing fix.md` for detailed documentation.
 The application uses a centralized `AppState` object to track:
 - Active generations (supports multiple concurrent generations)
 - Modal state (current images and index)
-- Polling timeouts for each generation
+- WebSocket connection state
 
 ## 🐛 Troubleshooting
 
@@ -252,21 +263,29 @@ The application uses a centralized `AppState` object to track:
 If you see "API key not configured" error:
 1. Make sure you created a `.env` file (not `.env.example`)
 2. Verify the API key is set correctly: `IMAGINEPRO_API_KEY=your_key_here`
-3. Restart the Flask server after changing the `.env` file
-4. Check that `python-dotenv` is installed: `pip install python-dotenv`
+3. Restart the server after changing the `.env` file
 
 ### Port Already in Use
-If port 5000 is already in use, edit `app.py` and change:
-```python
-app.run(debug=True, host='0.0.0.0', port=5000)
+If port 5000 is already in use, set the PORT environment variable:
+```bash
+PORT=5001 npm start
 ```
-to use a different port, e.g., `port=5001`
+
+Or edit the `.env` file:
+```
+PORT=5001
+```
 
 ### Images Not Loading
 1. Check browser console for errors
 2. Verify the `output/` folder exists and has proper permissions
 3. Check that images are being saved in `output/[timestamp_messageId]/`
 4. Try clearing browser cache
+
+### WebSocket Not Connecting
+1. Check browser console for WebSocket errors
+2. The app will fall back to HTTP polling automatically
+3. Ensure no firewall is blocking WebSocket connections
 
 ### Upscale/Variation Not Working
 1. Ensure you're right-clicking on the image itself (not the prompt area)
@@ -276,7 +295,13 @@ to use a different port, e.g., `port=5001`
 
 ## 📝 Recent Updates
 
-### Latest Changes (v2.0)
+### Latest Changes (v3.0)
+- ✅ **Node.js + Socket.io** - Real-time WebSocket updates (no more polling!)
+- ✅ **Automatic fallback** - Falls back to HTTP polling if WebSocket unavailable
+- ✅ **Server-side progress** - Progress polling done server-side, pushed to clients
+- ✅ **Improved performance** - Reduced client-side overhead
+
+### Previous Updates (v2.0)
 - ✅ **Dedicated Gallery Page** - New separate gallery view for browsing all images
 - ✅ **Lazy Loading** - Optimized image loading on both main and gallery pages
 - ✅ **Zoom Controls** - Adjustable grid layout (2-8 columns) with persistent preferences
@@ -284,7 +309,6 @@ to use a different port, e.g., `port=5001`
 - ✅ **Gallery Context Menu** - Download and copy URL directly from gallery
 - ✅ **Improved Image Loading** - Fixed skeleton loader issue with newly generated images
 - ✅ **Credits System** - Real-time credit balance display
-- ✅ **Search Functionality** - Universal search across both pages
 
 ### Previous Updates (v1.0)
 - ✅ Fixed image indexing for upscale/variation operations
@@ -298,8 +322,8 @@ to use a different port, e.g., `port=5001`
 
 This project is designed to be easily extensible. To add new features:
 
-1. **Backend:** Add new routes in `app.py` or create new modules like `imageactions.py`
-2. **Frontend:** Create new JS/CSS files in `static/` and include them in `index.html`
+1. **Backend:** Add new routes/WebSocket events in `server.js`
+2. **Frontend:** Create new JS/CSS files in `static/` and include them in the HTML templates
 3. **Follow the pattern:** Keep components modular and self-contained
 4. **Document:** Add docstrings and comments for complex logic
 
@@ -311,4 +335,5 @@ This project is provided as-is for educational and personal use.
 
 - **ImaginePro API** - For providing the AI image generation service
 - **Lucide Icons** - For the beautiful icon set
-- **Flask** - For the lightweight and flexible web framework
+- **Socket.io** - For seamless real-time communication
+- **Express** - For the robust Node.js web framework

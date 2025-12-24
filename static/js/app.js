@@ -1,18 +1,103 @@
-// Application state - now supports multiple concurrent generations
+// Application state - now supports multiple concurrent generations with WebSocket
 const AppState = {
-    activeGenerations: new Map(), // Map of messageId -> { prompt, skeletonId, pollTimeoutId }
+    activeGenerations: new Map(), // Map of messageId -> { prompt, skeletonId }
     modalState: {
         currentImages: [],
         currentIndex: 0
     },
-    lazyLoadObserver: null
+    lazyLoadObserver: null,
+    socket: null
 };
 
 // Configuration
 const CONFIG = {
-    POLL_INTERVAL: 3000,
     ERROR_DISPLAY_TIME: 5000
 };
+
+// Initialize WebSocket connection
+function initializeSocket() {
+    // Connect to Socket.io server
+    AppState.socket = io();
+    
+    // Handle connection events
+    AppState.socket.on('connect', () => {
+        console.log('Connected to server via WebSocket');
+    });
+    
+    AppState.socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+    });
+    
+    // Handle generation started confirmation
+    AppState.socket.on('generation_started', (data) => {
+        const { messageId, skeletonId, prompt } = data;
+        console.log(`Generation started: ${messageId}`);
+        
+        // Track this generation
+        AppState.activeGenerations.set(messageId, {
+            prompt,
+            skeletonId
+        });
+    });
+    
+    // Handle real-time progress updates
+    AppState.socket.on('progress', (data) => {
+        const { messageId, skeletonId, progress, status } = data;
+        console.log(`Progress for ${messageId}: ${progress} (${status})`);
+        
+        // Update skeleton progress display
+        updateSkeletonProgress(progress, skeletonId);
+    });
+    
+    // Handle generation complete
+    AppState.socket.on('generation_complete', (data) => {
+        const { messageId, skeletonId, images, raw_data } = data;
+        console.log(`Generation complete: ${messageId}`);
+        
+        // Replace skeleton with actual images
+        replaceGallerySkeletonWithImages(images, raw_data, skeletonId);
+        
+        // Update credits after generation completes
+        if (typeof fetchAndDisplayCredits === 'function') {
+            fetchAndDisplayCredits(true);
+        }
+        
+        // Clean up
+        AppState.activeGenerations.delete(messageId);
+        
+        // Show success notification
+        if (window.toast) {
+            window.toast.success('Generation complete!', 'Your images are ready');
+        }
+    });
+    
+    // Handle generation failed
+    AppState.socket.on('generation_failed', (data) => {
+        const { messageId, skeletonId, progress, status } = data;
+        console.log(`Generation failed: ${messageId}`);
+        
+        if (window.toast) {
+            window.toast.error('Generation failed', progress || status);
+        }
+        
+        removeSkeletonFromGallery(skeletonId);
+        AppState.activeGenerations.delete(messageId);
+    });
+    
+    // Handle errors
+    AppState.socket.on('error', (data) => {
+        const { skeletonId, message } = data;
+        console.error('WebSocket error:', message);
+        
+        if (window.toast) {
+            window.toast.error('Error', message);
+        }
+        
+        if (skeletonId) {
+            removeSkeletonFromGallery(skeletonId);
+        }
+    });
+}
 
 function showError(message) {
     // Legacy function - now uses toast notifications
@@ -129,8 +214,7 @@ function createImageCard(imageUrl, index, allImages = []) {
     return card;
 }
 
-// Removed old status and images section functions - now using gallery only
-
+// Generate image using WebSocket for real-time updates
 async function generateImage() {
     const promptInput = document.getElementById('promptInput');
     if (!promptInput) return;
@@ -160,43 +244,48 @@ async function generateImage() {
         inputSection.classList.remove('expanded');
     }
 
-    try {
-        const response = await fetch('/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ prompt })
-        });
+    // Use WebSocket if connected, otherwise fall back to REST API
+    if (AppState.socket && AppState.socket.connected) {
+        // Emit generation request via WebSocket
+        AppState.socket.emit('generate', { prompt, skeletonId });
+    } else {
+        // Fallback to REST API + polling
+        try {
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to generate image');
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to generate image');
+            }
+
+            const messageId = data.message_id;
+            
+            // Track this generation in our state
+            AppState.activeGenerations.set(messageId, {
+                prompt: data.prompt,
+                skeletonId: skeletonId
+            });
+            
+            // Start polling for this specific message (fallback mode)
+            pollStatus(messageId);
+
+        } catch (error) {
+            if (window.toast) {
+                window.toast.error('Generation failed', error.message);
+            }
+            removeSkeletonFromGallery(skeletonId);
         }
-
-        const messageId = data.message_id;
-        
-        // Track this generation in our state
-        AppState.activeGenerations.set(messageId, {
-            prompt: data.prompt,
-            skeletonId: skeletonId,
-            pollTimeoutId: null
-        });
-        
-        // Start polling for this specific message
-        pollStatus(messageId);
-
-    } catch (error) {
-        if (window.toast) {
-            window.toast.error('Generation failed', error.message);
-        }
-        removeSkeletonFromGallery(skeletonId);
     }
 }
 
-// Removed updateStatusText - no longer needed
-
+// Fallback polling function (used when WebSocket is not available)
 async function pollStatus(messageId) {
     const generation = AppState.activeGenerations.get(messageId);
     if (!generation) return;
@@ -219,8 +308,7 @@ async function pollStatus(messageId) {
             handleGenerationFailed(data.progress, messageId);
         } else {
             // Continue polling for this specific message
-            const timeoutId = setTimeout(() => pollStatus(messageId), CONFIG.POLL_INTERVAL);
-            generation.pollTimeoutId = timeoutId;
+            setTimeout(() => pollStatus(messageId), 3000);
         }
 
     } catch (error) {
@@ -240,13 +328,10 @@ function handleGenerationComplete(data, messageId) {
     
     // Update credits after generation completes
     if (typeof fetchAndDisplayCredits === 'function') {
-        fetchAndDisplayCredits(true); // Force refresh credits
+        fetchAndDisplayCredits(true);
     }
     
-    // Clean up this generation from active state
-    if (generation.pollTimeoutId) {
-        clearTimeout(generation.pollTimeoutId);
-    }
+    // Clean up
     AppState.activeGenerations.delete(messageId);
 }
 
@@ -259,10 +344,7 @@ function handleGenerationFailed(progress, messageId) {
     }
     removeSkeletonFromGallery(generation.skeletonId);
     
-    // Clean up this generation from active state
-    if (generation.pollTimeoutId) {
-        clearTimeout(generation.pollTimeoutId);
-    }
+    // Clean up
     AppState.activeGenerations.delete(messageId);
 }
 
@@ -271,15 +353,8 @@ function resetGenerationState(messageId) {
     if (!generation) return;
     
     removeSkeletonFromGallery(generation.skeletonId);
-    
-    // Clean up this generation from active state
-    if (generation.pollTimeoutId) {
-        clearTimeout(generation.pollTimeoutId);
-    }
     AppState.activeGenerations.delete(messageId);
 }
-
-// Removed displayImages - now using gallery-based functions
 
 function extractImagesFromRawData(rawData) {
     const possibleUrls = [];
@@ -527,7 +602,14 @@ function closeModal() {
     modal.classList.add('closing');
     if (modalImg) modalImg.classList.add('closing');
 
+    // Track if cleanup has already been called to prevent double execution
+    let cleanedUp = false;
+
     const cleanup = () => {
+        // Prevent double execution from both animationend and timeout
+        if (cleanedUp) return;
+        cleanedUp = true;
+
         // Remove active and closing states after animation ends
         modal.classList.remove('active');
         modal.classList.remove('closing');
@@ -538,9 +620,6 @@ function closeModal() {
         // Clear modal state
         AppState.modalState.currentImages = [];
         AppState.modalState.currentIndex = 0;
-
-        // Remove listeners to avoid leaks
-        modal.removeEventListener('animationend', onAnimEnd);
     };
 
     const onAnimEnd = (e) => {
@@ -609,6 +688,13 @@ function initializeApp() {
     // Initialize Lucide icons
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
+    }
+    
+    // Initialize WebSocket connection
+    if (typeof io !== 'undefined') {
+        initializeSocket();
+    } else {
+        console.warn('Socket.io not available, using polling fallback');
     }
     
     // Setup lazy loading observer
