@@ -38,6 +38,9 @@
                 <a href="/gallery" class="header-icon-btn" aria-label="Gallery">
                     <i data-lucide="grid" width="20" height="20"></i>
                 </a>
+                <button id="settingsBtn" class="header-icon-btn" aria-label="Settings">
+                    <i data-lucide="settings" width="20" height="20"></i>
+                </button>
             </div>
         </div>
     </header>
@@ -72,6 +75,28 @@
         <button class="modal-nav modal-nav-next" onclick="event.stopPropagation(); navigateModal(1)" aria-label="Next image">
             <i data-lucide="chevron-right" width="32" height="32"></i>
         </button>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal" role="dialog" aria-modal="true" aria-label="API Key Setup">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Setup API Key</h2>
+                <p>Enter your ImaginePro API key to continue</p>
+            </div>
+            <div class="modal-body">
+                <div class="input-wrapper">
+                    <input type="password" id="apiKeyInput" placeholder="sk-..." class="api-key-input">
+                    <button id="toggleApiKey" class="icon-btn" aria-label="Toggle password visibility">
+                        <i data-lucide="eye" width="16" height="16"></i>
+                    </button>
+                </div>
+                <p class="modal-hint">Your key is stored locally in your browser and sent securely to the server.</p>
+            </div>
+            <div class="modal-footer">
+                <button id="saveApiKeyBtn" class="primary-btn">Save API Key</button>
+            </div>
+        </div>
     </div>
 
     <script src="/js/toast.js"></script>

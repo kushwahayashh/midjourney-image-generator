@@ -11,8 +11,90 @@ const AppState = {
 
 // Configuration
 const CONFIG = {
-    ERROR_DISPLAY_TIME: 5000
+    ERROR_DISPLAY_TIME: 5000,
+    API_KEY_STORAGE_KEY: 'imaginepro_api_key'
 };
+
+// API Key Management
+function getApiKey() {
+    return localStorage.getItem(CONFIG.API_KEY_STORAGE_KEY) || '';
+}
+
+function saveApiKey(key) {
+    localStorage.setItem(CONFIG.API_KEY_STORAGE_KEY, key.trim());
+}
+
+function checkApiKey() {
+    const key = getApiKey();
+    if (!key) {
+        showApiKeyModal();
+        return false;
+    }
+    return true;
+}
+
+function showApiKeyModal() {
+    const modal = document.getElementById('apiKeyModal');
+    if (modal) {
+        modal.classList.add('active');
+        const input = document.getElementById('apiKeyInput');
+        if (input) {
+            input.value = getApiKey();
+            input.focus();
+        }
+    }
+}
+
+function closeApiKeyModal() {
+    const modal = document.getElementById('apiKeyModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function setupApiKeyModal() {
+    const saveBtn = document.getElementById('saveApiKeyBtn');
+    const toggleBtn = document.getElementById('toggleApiKey');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const input = document.getElementById('apiKeyInput');
+    
+    // Open modal when settings button is clicked
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', showApiKeyModal);
+    }
+
+    if (saveBtn && input) {
+        saveBtn.addEventListener('click', () => {
+            const key = input.value.trim();
+            if (key) {
+                saveApiKey(key);
+                closeApiKeyModal();
+                if (window.toast) window.toast.success('API Key Saved');
+            } else {
+                if (window.toast) window.toast.error('Please enter a valid API key');
+            }
+        });
+        
+        // Also save on Enter
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveBtn.click();
+        });
+    }
+    
+    if (toggleBtn && input) {
+        toggleBtn.addEventListener('click', () => {
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            
+            const icon = toggleBtn.querySelector('i');
+            if (icon) {
+                // Update icon if lucide is available, or just toggle class
+                if (typeof lucide !== 'undefined') {
+                    icon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+                    lucide.createIcons();
+                }
+            }
+        });
+    }
+}
 
 // Initialize WebSocket connection
 function initializeSocket() {
@@ -208,9 +290,10 @@ function createGenerationItem(gen) {
         imagesGrid.appendChild(card);
     });
     
-    genItem.appendChild(timestampDiv);
+    // Append in new order: Prompt -> Images -> Timestamp
     genItem.appendChild(promptDiv);
     genItem.appendChild(imagesGrid);
+    genItem.appendChild(timestampDiv);
     
     return genItem;
 }
@@ -252,6 +335,8 @@ function createImageCard(imageUrl, index, allImages = []) {
 
 // Generate image using WebSocket for real-time updates
 async function generateImage() {
+    if (!checkApiKey()) return;
+
     const promptInput = document.getElementById('promptInput');
     if (!promptInput) return;
     
@@ -283,75 +368,16 @@ async function generateImage() {
     // Use WebSocket if connected, otherwise fall back to REST API
     if (AppState.socket && AppState.socket.connected) {
         // Emit generation request via WebSocket
-        AppState.socket.emit('generate', { prompt, skeletonId });
+        AppState.socket.emit('generate', {
+            prompt,
+            skeletonId,
+            apiKey: getApiKey() // Send API key with request
+        });
     } else {
-        // Fallback to REST API + polling
-        try {
-            const response = await fetch('/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to generate image');
-            }
-
-            const messageId = data.message_id;
-            
-            // Track this generation in our state
-            AppState.activeGenerations.set(messageId, {
-                prompt: data.prompt,
-                skeletonId: skeletonId
-            });
-            
-            // Start polling for this specific message (fallback mode)
-            pollStatus(messageId);
-
-        } catch (error) {
-            if (window.toast) {
-                window.toast.error('Generation failed', error.message);
-            }
-            removeSkeletonFromGallery(skeletonId);
-        }
-    }
-}
-
-// Fallback polling function (used when WebSocket is not available)
-async function pollStatus(messageId) {
-    const generation = AppState.activeGenerations.get(messageId);
-    if (!generation) return;
-
-    try {
-        const response = await fetch(`/status/${messageId}?prompt=${encodeURIComponent(generation.prompt)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to fetch status');
-        }
-
-        // Update progress on skeleton images for this specific generation
-        updateSkeletonProgress(data.progress, generation.skeletonId);
-
-        // Check if done
-        if (data.status === 'DONE') {
-            handleGenerationComplete(data, messageId);
-        } else if (data.status === 'FAILED' || data.status === 'ERROR') {
-            handleGenerationFailed(data.progress, messageId);
-        } else {
-            // Continue polling for this specific message
-            setTimeout(() => pollStatus(messageId), 3000);
-        }
-
-    } catch (error) {
         if (window.toast) {
-            window.toast.error('Status check failed', error.message);
+            window.toast.error('Connection Error', 'WebSocket connection not available. Please refresh the page.');
         }
-        resetGenerationState(messageId);
+        removeSkeletonFromGallery(skeletonId);
     }
 }
 
@@ -462,9 +488,10 @@ function showSkeletonInGallery(prompt, count = 4, skeletonId) {
         imagesGrid.appendChild(card);
     }
     
-    genItem.appendChild(timestampDiv);
+    // Append in new order: Prompt -> Images -> Timestamp
     genItem.appendChild(promptDiv);
     genItem.appendChild(imagesGrid);
+    genItem.appendChild(timestampDiv);
     
     // Insert at the top of gallery
     gallerySection.insertBefore(genItem, gallerySection.firstChild);
@@ -744,6 +771,12 @@ function initializeApp() {
     
     // Check for generation parameter in URL
     checkGenerationParameter();
+
+    // Setup API Key Modal
+    setupApiKeyModal();
+    
+    // Initial check
+    checkApiKey();
 }
 
 function setupLazyLoadObserver() {

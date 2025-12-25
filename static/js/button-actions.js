@@ -42,44 +42,7 @@ async function handleButtonAction(messageId, button, imageIndex, originalPrompt)
                 skeletonId: skeletonId
             });
         } else {
-            // Fallback to REST API + polling
-            const response = await fetch('/button', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    messageId: messageId,
-                    button: button,
-                    prompt: originalPrompt
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to process button action');
-            }
-            
-            const newMessageId = data.message_id;
-            const newPrompt = data.prompt;
-            
-            // Track this generation in app state
-            if (typeof AppState !== 'undefined') {
-                AppState.activeGenerations.set(newMessageId, {
-                    prompt: newPrompt,
-                    skeletonId: skeletonId
-                });
-            }
-            
-            // Start polling for the new generation (fallback mode)
-            if (typeof pollStatus === 'function') {
-                pollStatus(newMessageId);
-            }
-            
-            if (window.toast) {
-                window.toast.success('Request sent', `${actionType} in progress`);
-            }
+            throw new Error('WebSocket connection not available. Please refresh the page.');
         }
         
     } catch (error) {

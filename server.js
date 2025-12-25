@@ -33,12 +33,12 @@ app.use(express.static('static'));
 app.use('/output', express.static(OUTPUT_DIR));
 
 // API Headers helper
-function getHeaders(jsonBody = false) {
-    const headers = { 'Authorization': `Bearer ${API_KEY}` };
-    if (jsonBody) {
-        headers['Content-Type'] = 'application/json';
-    }
-    return headers;
+function getHeaders(jsonBody = false, apiKey = null) {
+    const key = apiKey || API_KEY;
+    return {
+        'Authorization': `Bearer ${key}`,
+        ...(jsonBody && { 'Content-Type': 'application/json' })
+    };
 }
 
 // List all generations metadata
@@ -123,9 +123,9 @@ async function saveImages(messageId, imageUrls, prompt, rawData) {
 }
 
 // Get status from API
-async function getStatus(messageId) {
+async function getStatus(messageId, apiKey = null) {
     const url = `${BASE_URL}/message/fetch/${messageId}`;
-    const response = await axios.get(url, { headers: getHeaders(), timeout: 30000 });
+    const response = await axios.get(url, { headers: getHeaders(false, apiKey), timeout: 30000 });
     return response.data;
 }
 
@@ -183,6 +183,8 @@ app.get('/api/gallery/images', (req, res) => {
 app.post('/generate', async (req, res) => {
     try {
         const prompt = (req.body.prompt || '').trim();
+        // Get key from header
+        const apiKey = req.headers['x-api-key'] || API_KEY;
         
         if (!prompt) {
             return res.status(400).json({ error: 'No prompt provided' });
@@ -192,14 +194,14 @@ app.post('/generate', async (req, res) => {
             return res.status(400).json({ error: `Prompt too long (max ${MAX_PROMPT_LENGTH} characters)` });
         }
         
-        if (!API_KEY) {
-            return res.status(500).json({ error: 'API key not configured. Please set IMAGINEPRO_API_KEY environment variable.' });
+        if (!apiKey) {
+            return res.status(401).json({ error: 'API key not found. Please provide it in the settings.' });
         }
         
         const url = `${BASE_URL}/nova/imagine`;
-        const response = await axios.post(url, { prompt, timeout: 900 }, { 
-            headers: getHeaders(true), 
-            timeout: 30000 
+        const response = await axios.post(url, { prompt, timeout: 900 }, {
+            headers: getHeaders(true, apiKey),
+            timeout: 30000
         });
         
         const messageId = response.data.messageId || response.data.id || response.data.data?.messageId;
@@ -321,52 +323,7 @@ app.get('/api/credits', async (req, res) => {
     }
 });
 
-// Legacy status endpoint (for backward compatibility, but WebSocket is preferred)
-app.get('/status/:messageId', async (req, res) => {
-    try {
-        const { messageId } = req.params;
-        const prompt = req.query.prompt || '';
-        
-        if (!messageId) {
-            return res.status(400).json({ error: 'No message ID provided' });
-        }
-        
-        if (!API_KEY) {
-            return res.status(500).json({ error: 'API key not configured' });
-        }
-        
-        const data = await getStatus(messageId);
-        
-        const statusVal = (data.status || data.data?.status || '').toUpperCase();
-        let progress = data.progress;
-        if (progress === undefined || progress === null) {
-            progress = data.data?.progress;
-        }
-        if (progress === undefined || progress === null) {
-            progress = '...';
-        }
-        
-        let images = [];
-        let localImages = [];
-        
-        if (statusVal === 'DONE') {
-            images = extractImages(data);
-            if (images.length > 0) {
-                localImages = await saveImages(messageId, images, prompt, data);
-            }
-        }
-        
-        res.json({
-            status: statusVal,
-            progress,
-            images: localImages.length > 0 ? localImages : images,
-            raw_data: data
-        });
-    } catch (e) {
-        console.error('Error in status endpoint:', e.message);
-        res.status(500).json({ error: e.message });
-    }
-});
+// Status endpoint removed in favor of WebSocket
 
 // WebSocket handling for real-time progress updates
 io.on('connection', (socket) => {
@@ -377,15 +334,16 @@ io.on('connection', (socket) => {
     
     // Handle generation request via WebSocket
     socket.on('generate', async (data) => {
-        const { prompt, skeletonId } = data;
+        const { prompt, skeletonId, apiKey } = data;
+        const keyToUse = apiKey || API_KEY;
         
         if (!prompt || !prompt.trim()) {
             socket.emit('error', { skeletonId, message: 'No prompt provided' });
             return;
         }
         
-        if (!API_KEY) {
-            socket.emit('error', { skeletonId, message: 'API key not configured' });
+        if (!keyToUse) {
+            socket.emit('error', { skeletonId, message: 'API key not provided. Please setup in settings.' });
             return;
         }
         
@@ -393,7 +351,7 @@ io.on('connection', (socket) => {
             // Start generation
             const url = `${BASE_URL}/nova/imagine`;
             const response = await axios.post(url, { prompt: prompt.trim(), timeout: 900 }, {
-                headers: getHeaders(true),
+                headers: getHeaders(true, keyToUse),
                 timeout: 30000
             });
             
@@ -411,7 +369,8 @@ io.on('connection', (socket) => {
                 prompt: prompt.trim(),
                 progress: 0,
                 status: 'STARTING',
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                apiKey: keyToUse // Store key with job to use for polling
             };
             
             activeJobs.set(messageId, jobData);
@@ -420,7 +379,7 @@ io.on('connection', (socket) => {
             io.emit('generation_started', jobData);
             
             // Start polling and broadcast progress
-            pollAndBroadcast(messageId, prompt.trim(), skeletonId);
+            pollAndBroadcast(messageId, prompt.trim(), skeletonId, keyToUse);
             
         } catch (e) {
             console.error('Generation error:', e.message);
@@ -482,9 +441,15 @@ io.on('connection', (socket) => {
 });
 
 // Poll API and broadcast progress via WebSocket
-async function pollAndBroadcast(messageId, prompt, skeletonId) {
+async function pollAndBroadcast(messageId, prompt, skeletonId, apiKey = null) {
     try {
-        const data = await getStatus(messageId);
+        // Retrieve key from active job if not provided directly
+        if (!apiKey) {
+            const job = activeJobs.get(messageId);
+            if (job && job.apiKey) apiKey = job.apiKey;
+        }
+
+        const data = await getStatus(messageId, apiKey);
         
         // Only log when status changes or progress updates to avoid clutter
         if (data.status !== 'PROCESSING' || (data.progress && data.progress > 0)) {
@@ -516,6 +481,7 @@ async function pollAndBroadcast(messageId, prompt, skeletonId) {
             let localImages = [];
             
             if (images.length > 0) {
+                // Pass apiKey to saveImages if needed, though currently it downloads from CDN which is public
                 localImages = await saveImages(messageId, images, prompt, data);
             }
             
@@ -535,7 +501,7 @@ async function pollAndBroadcast(messageId, prompt, skeletonId) {
             activeJobs.delete(messageId);
         } else {
             // Continue polling
-            setTimeout(() => pollAndBroadcast(messageId, prompt, skeletonId), POLL_INTERVAL);
+            setTimeout(() => pollAndBroadcast(messageId, prompt, skeletonId, apiKey), POLL_INTERVAL);
         }
     } catch (e) {
         console.error('Polling error:', e.message);

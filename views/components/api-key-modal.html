@@ -1,0 +1,21 @@
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal" role="dialog" aria-modal="true" aria-label="API Key Setup">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Setup API Key</h2>
+                <p>Enter your ImaginePro API key to continue</p>
+            </div>
+            <div class="modal-body">
+                <div class="input-wrapper">
+                    <input type="password" id="apiKeyInput" placeholder="sk-..." class="api-key-input">
+                    <button id="toggleApiKey" class="icon-btn" aria-label="Toggle password visibility">
+                        <i data-lucide="eye" width="16" height="16"></i>
+                    </button>
+                </div>
+                <p class="modal-hint">Your key is stored locally in your browser and sent securely to the server.</p>
+            </div>
+            <div class="modal-footer">
+                <button id="saveApiKeyBtn" class="primary-btn">Save API Key</button>
+            </div>
+        </div>
+    </div>
