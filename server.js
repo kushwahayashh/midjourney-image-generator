@@ -486,6 +486,11 @@ async function pollAndBroadcast(messageId, prompt, skeletonId) {
     try {
         const data = await getStatus(messageId);
         
+        // Only log when status changes or progress updates to avoid clutter
+        if (data.status !== 'PROCESSING' || (data.progress && data.progress > 0)) {
+             console.log(`[Poll ${messageId.substring(0, 8)}...] Status: ${data.status}, Progress: ${data.progress || 0}%`);
+        }
+
         const statusVal = (data.status || data.data?.status || '').toUpperCase();
         let progress = data.progress;
         if (progress === undefined || progress === null) {
