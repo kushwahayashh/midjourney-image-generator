@@ -19,6 +19,9 @@ const OUTPUT_DIR = 'output';
 const MAX_PROMPT_LENGTH = 1000;
 const POLL_INTERVAL = 2000; // 2 seconds for server-side polling
 
+// Track active jobs globally
+const activeJobs = new Map(); // messageId -> { messageId, prompt, skeletonId, progress, status, timestamp }
+
 // Create output directory if it doesn't exist
 if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -369,6 +372,9 @@ app.get('/status/:messageId', async (req, res) => {
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
     
+    // Send current active jobs to the new client
+    socket.emit('active_jobs', Array.from(activeJobs.values()));
+    
     // Handle generation request via WebSocket
     socket.on('generate', async (data) => {
         const { prompt, skeletonId } = data;
@@ -399,10 +405,22 @@ io.on('connection', (socket) => {
             }
             
             // Send initial confirmation
-            socket.emit('generation_started', { messageId, skeletonId, prompt: prompt.trim() });
+            const jobData = {
+                messageId,
+                skeletonId,
+                prompt: prompt.trim(),
+                progress: 0,
+                status: 'STARTING',
+                timestamp: Date.now()
+            };
+            
+            activeJobs.set(messageId, jobData);
+            
+            // Broadcast to all clients
+            io.emit('generation_started', jobData);
             
             // Start polling and broadcast progress
-            pollAndBroadcast(socket, messageId, prompt.trim(), skeletonId);
+            pollAndBroadcast(messageId, prompt.trim(), skeletonId);
             
         } catch (e) {
             console.error('Generation error:', e.message);
@@ -436,10 +454,21 @@ io.on('connection', (socket) => {
             const actionType = button.startsWith('U') ? 'Upscale' : 'Variation';
             const newPrompt = `${actionType} (${button}) of: ${originalPrompt}`;
             
-            socket.emit('generation_started', { messageId: newMessageId, skeletonId, prompt: newPrompt });
+            const jobData = {
+                messageId: newMessageId,
+                skeletonId,
+                prompt: newPrompt,
+                progress: 0,
+                status: 'STARTING',
+                timestamp: Date.now()
+            };
+            
+            activeJobs.set(newMessageId, jobData);
+            
+            io.emit('generation_started', jobData);
             
             // Start polling
-            pollAndBroadcast(socket, newMessageId, newPrompt, skeletonId);
+            pollAndBroadcast(newMessageId, newPrompt, skeletonId);
             
         } catch (e) {
             console.error('Button action error:', e.message);
@@ -453,7 +482,7 @@ io.on('connection', (socket) => {
 });
 
 // Poll API and broadcast progress via WebSocket
-async function pollAndBroadcast(socket, messageId, prompt, skeletonId) {
+async function pollAndBroadcast(messageId, prompt, skeletonId) {
     try {
         const data = await getStatus(messageId);
         
@@ -466,8 +495,15 @@ async function pollAndBroadcast(socket, messageId, prompt, skeletonId) {
             progress = '...';
         }
         
-        // Broadcast progress update
-        socket.emit('progress', { messageId, skeletonId, progress, status: statusVal });
+        // Update global state
+        const job = activeJobs.get(messageId);
+        if (job) {
+            job.progress = progress;
+            job.status = statusVal;
+        }
+        
+        // Broadcast progress update to all clients
+        io.emit('progress', { messageId, skeletonId, progress, status: statusVal });
         
         if (statusVal === 'DONE') {
             // Extract and save images
@@ -479,21 +515,27 @@ async function pollAndBroadcast(socket, messageId, prompt, skeletonId) {
             }
             
             // Broadcast completion
-            socket.emit('generation_complete', {
+            io.emit('generation_complete', {
                 messageId,
                 skeletonId,
                 images: localImages.length > 0 ? localImages : images,
                 raw_data: data
             });
+            
+            // Remove from active jobs
+            activeJobs.delete(messageId);
+            
         } else if (statusVal === 'FAILED' || statusVal === 'ERROR') {
-            socket.emit('generation_failed', { messageId, skeletonId, progress, status: statusVal });
+            io.emit('generation_failed', { messageId, skeletonId, progress, status: statusVal });
+            activeJobs.delete(messageId);
         } else {
             // Continue polling
-            setTimeout(() => pollAndBroadcast(socket, messageId, prompt, skeletonId), POLL_INTERVAL);
+            setTimeout(() => pollAndBroadcast(messageId, prompt, skeletonId), POLL_INTERVAL);
         }
     } catch (e) {
         console.error('Polling error:', e.message);
-        socket.emit('error', { skeletonId, message: e.message });
+        io.emit('error', { skeletonId, message: e.message });
+        activeJobs.delete(messageId);
     }
 }
 

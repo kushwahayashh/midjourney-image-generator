@@ -38,12 +38,48 @@ function initializeSocket() {
             prompt,
             skeletonId
         });
+
+        // Ensure skeleton exists (if started from another tab)
+        if (!document.getElementById(skeletonId)) {
+            showSkeletonInGallery(prompt, 4, skeletonId);
+        }
+    });
+
+    // Handle sync of all active jobs on connection
+    AppState.socket.on('active_jobs', (jobs) => {
+        console.log('Syncing active jobs:', jobs);
+        jobs.forEach(job => {
+            const { messageId, skeletonId, prompt, progress, status } = job;
+            
+            // Track globally
+            AppState.activeGenerations.set(messageId, { prompt, skeletonId });
+            
+            // Restore UI if missing
+            if (!document.getElementById(skeletonId)) {
+                showSkeletonInGallery(prompt, 4, skeletonId);
+            }
+            
+            // Update progress immediately
+            if (progress) {
+                updateSkeletonProgress(progress, skeletonId);
+            }
+        });
     });
     
     // Handle real-time progress updates
     AppState.socket.on('progress', (data) => {
         const { messageId, skeletonId, progress, status } = data;
         console.log(`Progress for ${messageId}: ${progress} (${status})`);
+        
+        // Update skeleton progress display
+        updateSkeletonProgress(progress, skeletonId);
+        // Ensure UI exists (active sync might have missed it or race condition)
+        if (!document.getElementById(skeletonId)) {
+            const generation = AppState.activeGenerations.get(messageId);
+            if (generation) {
+                showSkeletonInGallery(generation.prompt, 4, skeletonId);
+            }
+        }
         
         // Update skeleton progress display
         updateSkeletonProgress(progress, skeletonId);
@@ -231,7 +267,7 @@ async function generateImage() {
     // Generate a unique skeleton ID for this request
     const skeletonId = `generation-skeleton-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Show skeleton at the top of gallery
+    // Show skeleton at the top of gallery IMMEDIATELY for instant feedback
     showSkeletonInGallery(prompt, 4, skeletonId);
     
     // Clear textarea after submission
